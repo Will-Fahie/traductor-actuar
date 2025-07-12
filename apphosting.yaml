@@ -1,0 +1,17 @@
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+
+# Environment variables and secrets.
+# env:
+#   - variable: MESSAGE
+#     value: Hello world!
+#     availability:
+#       - BUILD
+#       - RUNTIME
+#   - variable: MY_SECRET
+#     secret: mySecretRef
+
+framework: flutter
+outputDir: build/web
