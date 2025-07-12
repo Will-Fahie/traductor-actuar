@@ -1,16 +1,11 @@
 {
-  "apphosting": {
-    "backendId": "traductor-achuar-web-app",
-    "rootDir": ".",
+  "hosting": {
+    "site": "achuar-translator",
+    "public": "build/web",
     "ignore": [
       "firebase.json",
-      "android/**",
-      "ios/**",
-      "**/*.hprof",
-      "build/**",
-      ".dart_tool/**",
-      ".idea/**",
-      "*.iml"
+      "**/.*",
+      "**/node_modules/**"
     ]
   }
 }
