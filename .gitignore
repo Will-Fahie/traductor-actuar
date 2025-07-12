@@ -31,6 +31,7 @@ ios/Flutter/Flutter.framework
 *.hprof
 *.keystore
 *.jks
+.dart_tool/
 
 # Android
 # Built application files
