@@ -2,7 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:myapp/screens/home_screen.dart';
+import 'package:myapp/screens/submission_tabs_screen.dart';
+import 'package:myapp/screens/guide_resources_screen.dart';
 import 'firebase_options.dart';
+
+// A placeholder screen for features that are not yet implemented
+class NotImplementedScreen extends StatelessWidget {
+  final String featureName;
+  const NotImplementedScreen({super.key, required this.featureName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(featureName)),
+      body: Center(child: Text('$featureName has not been implemented')),
+    );
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +73,16 @@ class MyApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.system,
-      home: const HomeScreen(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const HomeScreen(),
+        '/dictionary': (context) => const NotImplementedScreen(featureName: 'Diccionario'),
+        '/submit': (context) => const SubmissionTabsScreen(),
+        '/translator': (context) => const NotImplementedScreen(featureName: 'Traductor'),
+        '/teaching_resources': (context) => const NotImplementedScreen(featureName: 'Recursos de Enseñanza'),
+        '/guide_resources': (context) => const GuideResourcesScreen(),
+        '/ecolodge_resources': (context) => const NotImplementedScreen(featureName: 'Recursos de Ecolodge'),
+      },
     );
   }
 }
