@@ -8,15 +8,15 @@ class HomeScreen extends StatelessWidget {
     // A little helper to get the number of columns based on screen width
     int getCrossAxisCount(double width) {
       if (width < 600) return 2; // Mobile
-      if (width < 1200) return 3; // Tablet
+      if (width < 900) return 3; // Tablet
       return 4; // Desktop
     }
     
     // A little helper to get the aspect ratio based on screen width
     double getAspectRatio(double width) {
       if (width < 600) return 1.0; // Mobile
-      if (width < 1200) return 1.2; // Tablet
-      return 1.4; // Desktop
+      if (width < 900) return 1.1; // Tablet
+      return 1.3; // Desktop
     }
 
     return Scaffold(
@@ -39,9 +39,9 @@ class HomeScreen extends StatelessWidget {
               _buildGridItem(context, 'Diccionario', Icons.book, '/dictionary'),
               _buildGridItem(context, 'Envío de Frases', Icons.send, '/submit'),
               _buildGridItem(context, 'Traductor', Icons.translate, '/translator'),
-              _build_grid_item(context, 'Recursos de Enseñanza', Icons.school, '/teaching_resources'),
-              _build_grid_item(context, 'Recursos de Guía', Icons.map, '/guide_resources'),
-              _build_grid_item(context, 'Recursos de Ecolodge', Icons.eco, '/ecolodge_resources'),
+              _buildGridItem(context, 'Recursos de Enseñanza', Icons.school, '/teaching_resources'),
+              _buildGridItem(context, 'Recursos de Guía', Icons.map, '/guide_resources'),
+              _buildGridItem(context, 'Recursos de Ecolodge', Icons.eco, '/ecolodge_resources'),
             ],
           );
         },
