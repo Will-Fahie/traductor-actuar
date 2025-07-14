@@ -1,20 +1,13 @@
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:collection';
 
-class GuideResourcesScreen extends StatelessWidget {
-  const GuideResourcesScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const AnimalListScreen();
-  }
-}
-
 class AnimalListScreen extends StatefulWidget {
-  const AnimalListScreen({super.key});
+  final String collectionName;
+  final String title;
+
+  const AnimalListScreen({super.key, required this.collectionName, required this.title});
 
   @override
   _AnimalListScreenState createState() => _AnimalListScreenState();
@@ -26,14 +19,14 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _firestore.collection('animals').orderBy('mainName').snapshots(includeMetadataChanges: true),
+      stream: _firestore.collection(widget.collectionName).orderBy('mainName').snapshots(includeMetadataChanges: true),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Scaffold(appBar: AppBar(title: const Text('Recursos de Guía')), body: Center(child: Text('Error al cargar los animales', style: Theme.of(context).textTheme.titleMedium)));
+          return Scaffold(appBar: AppBar(title: Text(widget.title)), body: Center(child: Text('Error al cargar los datos', style: Theme.of(context).textTheme.titleMedium)));
         }
 
         if (!snapshot.hasData) {
-          return Scaffold(appBar: AppBar(title: const Text('Recursos de Guía')), body: const Center(child: CircularProgressIndicator()));
+          return Scaffold(appBar: AppBar(title: Text(widget.title)), body: const Center(child: CircularProgressIndicator()));
         }
 
         final querySnapshot = snapshot.data!;
@@ -46,14 +39,14 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
           length: sortedKeys.isEmpty ? 1 : sortedKeys.length,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('Recursos de Guía'),
+              title: Text(widget.title),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.search),
                   onPressed: () {
                     showSearch(
                       context: context, 
-                      delegate: AnimalSearchDelegate(allAnimals: allAnimals)
+                      delegate: AnimalSearchDelegate(allAnimals: allAnimals, collectionName: widget.collectionName)
                     );
                   },
                 ),
@@ -81,13 +74,13 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
                   ),
                 if (sortedKeys.isEmpty && !isOffline)
                   const Center(child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text("No se encontraron animales.", style: TextStyle(fontSize: 18)),
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text("No se encontraron datos.", style: TextStyle(fontSize: 18)),
                   ))
                 else if (sortedKeys.isEmpty && isOffline)
                    const Center(child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text("Conéctate a internet para descargar la lista de animales.", textAlign: TextAlign.center, style: TextStyle(fontSize: 18)),
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text("Conéctate a internet para descargar la lista.", textAlign: TextAlign.center, style: TextStyle(fontSize: 18)),
                   ))
                 else
                   Expanded(
@@ -99,7 +92,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
                           itemCount: letterAnimals.length,
                           separatorBuilder: (context, index) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            return AnimalCard(animalDoc: letterAnimals[index]);
+                            return AnimalCard(animalDoc: letterAnimals[index], collectionName: widget.collectionName);
                           },
                         );
                       }).toList(),
@@ -131,8 +124,9 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
 
 class AnimalSearchDelegate extends SearchDelegate {
   final List<QueryDocumentSnapshot> allAnimals;
+  final String collectionName;
 
-  AnimalSearchDelegate({required this.allAnimals});
+  AnimalSearchDelegate({required this.allAnimals, required this.collectionName});
 
   @override
   ThemeData appBarTheme(BuildContext context) {
@@ -199,7 +193,7 @@ class AnimalSearchDelegate extends SearchDelegate {
       itemCount: searchResults.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return AnimalCard(animalDoc: searchResults[index]);
+        return AnimalCard(animalDoc: searchResults[index], collectionName: collectionName);
       },
     );
   }
@@ -214,10 +208,11 @@ class AnimalSearchDelegate extends SearchDelegate {
 
 class AnimalCard extends StatelessWidget {
   final QueryDocumentSnapshot animalDoc;
+  final String collectionName;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  AnimalCard({super.key, required this.animalDoc});
+  AnimalCard({super.key, required this.animalDoc, required this.collectionName});
 
   @override
   Widget build(BuildContext context) {
@@ -377,7 +372,7 @@ class AnimalCard extends StatelessWidget {
   }
 
   void _updateAnimal(String docId, String mainName, String englishName, String spanishName) {
-    _firestore.collection('animals').doc(docId).update({
+    _firestore.collection(collectionName).doc(docId).update({
       'mainName': mainName,
       'englishName': englishName,
       'spanishName': spanishName,

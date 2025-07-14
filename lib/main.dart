@@ -3,7 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:myapp/screens/home_screen.dart';
 import 'package:myapp/screens/submission_tabs_screen.dart';
-import 'package:myapp/screens/guide_resources_screen.dart';
+import 'package:myapp/screens/guide_categories_screen.dart';
+import 'package:myapp/screens/animal_list_screen.dart';
+import 'package:myapp/screens/teaching_resources_screen.dart';
+import 'package:myapp/screens/level1_screen.dart';
+import 'package:myapp/screens/level2_screen.dart';
+import 'package:myapp/screens/level3_screen.dart';
+import 'package:myapp/screens/category_detail_screen.dart';
 import 'firebase_options.dart';
 
 // A placeholder screen for features that are not yet implemented
@@ -79,9 +85,18 @@ class MyApp extends StatelessWidget {
         '/dictionary': (context) => const NotImplementedScreen(featureName: 'Diccionario'),
         '/submit': (context) => const SubmissionTabsScreen(),
         '/translator': (context) => const NotImplementedScreen(featureName: 'Traductor'),
-        '/teaching_resources': (context) => const NotImplementedScreen(featureName: 'Recursos de Enseñanza'),
-        '/guide_resources': (context) => const GuideResourcesScreen(),
+        '/teaching_resources': (context) => const TeachingResourcesScreen(),
+        '/guide_resources': (context) => const GuideCategoriesScreen(),
         '/ecolodge_resources': (context) => const NotImplementedScreen(featureName: 'Recursos de Ecolodge'),
+        '/level1': (context) => const Level1Screen(),
+        '/level2': (context) => const Level2Screen(),
+        '/level3': (context) => const Level3Screen(),
+        '/numbers': (context) => const CategoryDetailScreen(categoryName: 'Números 1-10'),
+        '/animals': (context) => const CategoryDetailScreen(categoryName: 'Animales Básicos'),
+        '/phrases': (context) => const CategoryDetailScreen(categoryName: 'Frases Básicas'),
+        '/colors': (context) => const CategoryDetailScreen(categoryName: 'Colores'),
+        '/birds': (context) => const AnimalListScreen(collectionName: 'animals_birds', title: 'Aves'),
+        '/mammals': (context) => const AnimalListScreen(collectionName: 'animals_mammals', title: 'Mamíferos'),
       },
     );
   }
