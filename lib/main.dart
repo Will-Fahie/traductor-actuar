@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:myapp/screens/home_screen.dart';
 import 'package:myapp/screens/submission_tabs_screen.dart';
-import 'package:myapp/screens/guide_resources_screen.dart';
+import 'package:myapp/screens/guide_categories_screen.dart';
+import 'package:myapp/screens/animal_list_screen.dart';
 import 'package:myapp/screens/teaching_resources_screen.dart';
 import 'package:myapp/screens/level1_screen.dart';
 import 'package:myapp/screens/level2_screen.dart';
@@ -85,7 +86,7 @@ class MyApp extends StatelessWidget {
         '/submit': (context) => const SubmissionTabsScreen(),
         '/translator': (context) => const NotImplementedScreen(featureName: 'Traductor'),
         '/teaching_resources': (context) => const TeachingResourcesScreen(),
-        '/guide_resources': (context) => const GuideResourcesScreen(),
+        '/guide_resources': (context) => const GuideCategoriesScreen(),
         '/ecolodge_resources': (context) => const NotImplementedScreen(featureName: 'Recursos de Ecolodge'),
         '/level1': (context) => const Level1Screen(),
         '/level2': (context) => const Level2Screen(),
@@ -94,6 +95,8 @@ class MyApp extends StatelessWidget {
         '/animals': (context) => const CategoryDetailScreen(categoryName: 'Animales Básicos'),
         '/phrases': (context) => const CategoryDetailScreen(categoryName: 'Frases Básicas'),
         '/colors': (context) => const CategoryDetailScreen(categoryName: 'Colores'),
+        '/birds': (context) => const AnimalListScreen(collectionName: 'animals_birds', title: 'Aves'),
+        '/mammals': (context) => const AnimalListScreen(collectionName: 'animals_mammals', title: 'Mamíferos'),
       },
     );
   }
