@@ -1,0 +1,879 @@
+{
+  "levels": [
+    {
+      "name": "Nivel 1",
+      "lessons": [
+        {
+          "name": "Números",
+          "entries": [
+            {
+              "achuar": "Tikichik",
+              "spanish": "Uno",
+              "english": "One"
+            },
+            {
+              "achuar": "Jimiar",
+              "spanish": "Dos",
+              "english": "Two"
+            },
+            {
+              "achuar": "Kampatam",
+              "spanish": "Tres",
+              "english": "Three"
+            },
+            {
+              "achuar": "Yachintiuk",
+              "spanish": "Cuatro",
+              "english": "Four"
+            },
+            {
+              "achuar": "Uwej",
+              "spanish": "Cinco",
+              "english": "Five"
+            },
+            {
+              "achuar": "Iruk",
+              "spanish": "Seis",
+              "english": "Six"
+            },
+            {
+              "achuar": "Jimiairuk",
+              "spanish": "Siete",
+              "english": "Seven"
+            },
+            {
+              "achuar": "Mena",
+              "spanish": "Ocho",
+              "english": "Eight"
+            },
+            {
+              "achuar": "Ipiak",
+              "spanish": "Nueve",
+              "english": "Nine"
+            },
+            {
+              "achuar": "Mai uwej",
+              "spanish": "Diez",
+              "english": "Ten"
+            }
+          ]
+        },
+        {
+          "name": "Animales Basicos",
+          "entries": [
+            {
+              "achuar": "Patu",
+              "spanish": "Pato",
+              "english": "Duck"
+            },
+            {
+              "achuar": "Atash",
+              "spanish": "Pollo",
+              "english": "Chicken"
+            },
+            {
+              "achuar": "Mishi",
+              "spanish": "Gato",
+              "english": "Cat"
+            },
+            {
+              "achuar": "Chinki",
+              "spanish": "Pajaro",
+              "english": "Bird"
+            },
+            {
+              "achuar": "Yawa",
+              "spanish": "Perro",
+              "english": "Dog"
+            },
+            {
+              "achuar": "Uwejtin",
+              "spanish": "Mono",
+              "english": "Monkey"
+            },
+            {
+              "achuar": "Kawash",
+              "spanish": "Lora",
+              "english": "Parrot"
+            },
+            {
+              "achuar": "Chiwia",
+              "spanish": "Trompetero",
+              "english": "Trumpeter"
+            }
+          ]
+        },
+        {
+          "name": "Frases Basicas",
+          "entries": [
+            {
+              "achuar": "Tasha",
+              "spanish": "Hola",
+              "english": "Hello"
+            },
+            {
+              "achuar": "Weajai",
+              "spanish": "Adios",
+              "english": "Goodbye"
+            },
+            {
+              "achuar": "Maketai",
+              "spanish": "Gracias",
+              "english": "Thank you"
+            },
+            {
+              "achuar": "Kashin",
+              "spanish": "Hasta mañana",
+              "english": "See you tomorrow"
+            },
+            {
+              "achuar": "Winiajai",
+              "spanish": "Buenas dias/tardes/noches",
+              "english": "Good morning/afternoon/night"
+            }
+          ]
+        },
+        {
+          "name": "Colores",
+          "entries": [
+            {
+              "achuar": "Kinkía",
+              "spanish": "Azúl",
+              "english": "Blue"
+            },
+            {
+              "achuar": "Takum",
+              "spanish": "Amarillo",
+              "english": "Yellow"
+            },
+            {
+              "achuar": "Samek",
+              "spanish": "Verde",
+              "english": "Green"
+            },
+            {
+              "achuar": "Keaku",
+              "spanish": "Rojo",
+              "english": "Red"
+            },
+            {
+              "achuar": "Pujuu",
+              "spanish": "Blanco",
+              "english": "White"
+            },
+            {
+              "achuar": "Shuwint",
+              "spanish": "Negro",
+              "english": "Black"
+            },
+            {
+              "achuar": "Churup",
+              "spanish": "Café",
+              "english": "Brown"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Nivel 2",
+      "lessons": [
+        {
+          "name": "Numeros 10-20",
+          "entries": [
+            {
+              "achuar": "Mai uwej tikichik",
+              "spanish": "Once",
+              "english": "Eleven"
+            },
+            {
+              "achuar": "Mai uwej jimiar",
+              "spanish": "Doce",
+              "english": "Twelve"
+            },
+            {
+              "achuar": "Mai uwej kampatam",
+              "spanish": "Trece",
+              "english": "Thirteen"
+            },
+            {
+              "achuar": "Mai uwej yachintiuk",
+              "spanish": "Catorce",
+              "english": "Fourteen"
+            },
+            {
+              "achuar": "Mai uwej uwej",
+              "spanish": "Quince",
+              "english": "Fifteen"
+            },
+            {
+              "achuar": "Mai uwej iruk",
+              "spanish": "Dieciséis",
+              "english": "Sixteen"
+            },
+            {
+              "achuar": "Mai uwej jimiairuk",
+              "spanish": "Diecisiete",
+              "english": "Seventeen"
+            },
+            {
+              "achuar": "Mai uwej mena",
+              "spanish": "Dieciocho",
+              "english": "Eighteen"
+            },
+            {
+              "achuar": "Mai uwej ipiak",
+              "spanish": "Diecinueve",
+              "english": "Nineteen"
+            },
+            {
+              "achuar": "Mai nawe",
+              "spanish": "Veinte",
+              "english": "Twenty"
+            }
+          ]
+        },
+        {
+          "name": "La familia",
+          "entries": [
+            {
+              "achuar": "Apachur",
+              "spanish": "Abuelo",
+              "english": "Grandfather"
+            },
+            {
+              "achuar": "Nukuchur",
+              "spanish": "Abuela",
+              "english": "Grandmother"
+            },
+            {
+              "achuar": "Apar",
+              "spanish": "Padre",
+              "english": "Father"
+            },
+            {
+              "achuar": "Nukur",
+              "spanish": "Madre",
+              "english": "Mother"
+            },
+            {
+              "achuar": "Yatsuru, umar",
+              "spanish": "Hermano",
+              "english": "Brother"
+            },
+            {
+              "achuar": "Kair (entre mujer), umar (hombre a mujer)",
+              "spanish": "Hermana",
+              "english": "Sister"
+            },
+            {
+              "achuar": "Kana yatsur (entre hombres), kana umar (mujer a hombre)",
+              "spanish": "Primo",
+              "english": "Cousin (male)"
+            },
+            {
+              "achuar": "Kair (entre mujeres), kana umar (hombre a mujer)",
+              "spanish": "Prima",
+              "english": "Cousin (female)"
+            },
+            {
+              "achuar": "Uchir",
+              "spanish": "Hijo",
+              "english": "Son"
+            },
+            {
+              "achuar": "Nawantur",
+              "spanish": "Hija",
+              "english": "Daughter"
+            }
+          ]
+        },
+        {
+          "name": "Alimentos",
+          "entries": [
+            {
+              "achuar": "Mama",
+              "spanish": "Yuka",
+              "english": "Yucca"
+            },
+            {
+              "achuar": "Papachnia",
+              "spanish": "Papa china",
+              "english": "Taro root"
+            },
+            {
+              "achuar": "Papaij",
+              "spanish": "Papaya",
+              "english": "Papaya"
+            },
+            {
+              "achuar": "Paat",
+              "spanish": "Caña de azucar",
+              "english": "Sugar cane"
+            },
+            {
+              "achuar": "Winchu",
+              "spanish": "Platano",
+              "english": "Plantain"
+            },
+            {
+              "achuar": "Shaa",
+              "spanish": "Maiz",
+              "english": "Corn"
+            },
+            {
+              "achuar": "Nuse",
+              "spanish": "Mani",
+              "english": "Peanut"
+            },
+            {
+              "achuar": "Inchi",
+              "spanish": "Camote",
+              "english": "Sweet potato"
+            },
+            {
+              "achuar": "Juunt matá",
+              "spanish": "Coco",
+              "english": "Coconut"
+            },
+            {
+              "achuar": "Kuwish",
+              "spanish": "Piña",
+              "english": "Pineapple"
+            },
+            {
+              "achuar": "Keach",
+              "spanish": "Chirimoya",
+              "english": "Custard apple"
+            }
+          ]
+        },
+        {
+          "name": "Dias de la semana",
+          "entries": [
+            {
+              "achuar": "Wayus",
+              "spanish": "Lunes",
+              "english": "Monday"
+            },
+            {
+              "achuar": null,
+              "spanish": "Martes",
+              "english": "Tuesday"
+            },
+            {
+              "achuar": null,
+              "spanish": "Miercoles",
+              "english": "Wednesday"
+            },
+            {
+              "achuar": null,
+              "spanish": "Jueves",
+              "english": "Thursday"
+            },
+            {
+              "achuar": null,
+              "spanish": "Viernes",
+              "english": "Friday"
+            },
+            {
+              "achuar": null,
+              "spanish": "Sabado",
+              "english": "Saturday"
+            },
+            {
+              "achuar": "Ayamtai",
+              "spanish": "Domingo",
+              "english": "Sunday"
+            }
+          ]
+        },
+        {
+          "name": "Mas frases basicas",
+          "entries": [
+            {
+              "achuar": "Itiur pujam?",
+              "spanish": "Como estas?",
+              "english": "How are you?"
+            },
+            {
+              "achuar": "Penker pujajai",
+              "spanish": "Estoy bien",
+              "english": "I am well"
+            },
+            {
+              "achuar": "Pase pujajai",
+              "spanish": "Estoy mal",
+              "english": "I am not well"
+            },
+            {
+              "achuar": "Jajai/sunkurmakjai",
+              "spanish": "Estoy enfermo",
+              "english": "I am sick"
+            },
+            {
+              "achuar": "Ami narmisha yait?",
+              "spanish": "Como te llamas?",
+              "english": "What is your name?"
+            },
+            {
+              "achuar": "Winia naarka",
+              "spanish": "Mi nombre es",
+              "english": "My name is"
+            },
+            {
+              "achuar": "Tuniampaitiam",
+              "spanish": "De donde eres?",
+              "english": "Where are you from?"
+            },
+            {
+              "achuar": "Wikia...",
+              "spanish": "Yo soy de ...",
+              "english": "I am from..."
+            },
+            {
+              "achuar": "Warutam uwiya takakam?",
+              "spanish": "Cuantos años tienes?",
+              "english": "How old are you?"
+            },
+            {
+              "achuar": "Wikia takakjai",
+              "spanish": "Yo tengo... años",
+              "english": "I am... years old"
+            }
+          ]
+        },
+        {
+          "name": "Partes del Cuerpo",
+          "entries": [
+            {
+              "achuar": "Muuk",
+              "spanish": "La cabeza",
+              "english": "The head"
+            },
+            {
+              "achuar": "Jintiash",
+              "spanish": "El pelo",
+              "english": "The hair"
+            },
+            {
+              "achuar": "Jií",
+              "spanish": "Ojo",
+              "english": "Eye"
+            },
+            {
+              "achuar": "Nuji",
+              "spanish": "Nariz",
+              "english": "Nose"
+            },
+            {
+              "achuar": "Kuwish",
+              "spanish": "Oreja",
+              "english": "Ear"
+            },
+            {
+              "achuar": "Wene",
+              "spanish": "Boca",
+              "english": "Mouth"
+            },
+            {
+              "achuar": "Nai",
+              "spanish": "Diente",
+              "english": "Tooth"
+            },
+            {
+              "achuar": "Iniaj",
+              "spanish": "Lengua",
+              "english": "Tongue"
+            },
+            {
+              "achuar": "Netsep",
+              "spanish": "Pecho",
+              "english": "Chest"
+            },
+            {
+              "achuar": "Wake",
+              "spanish": "Bariga",
+              "english": "Belly"
+            },
+            {
+              "achuar": "Uwej",
+              "spanish": "Mano",
+              "english": "Hand"
+            },
+            {
+              "achuar": "Maku",
+              "spanish": "Pierna",
+              "english": "Leg"
+            },
+            {
+              "achuar": "Nawe",
+              "spanish": "Pies",
+              "english": "Feet"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Nivel 3",
+      "lessons": [
+        {
+          "name": "Numeros 10-100",
+          "entries": [
+            {
+              "achuar": "Mai nawe",
+              "spanish": "Veinte",
+              "english": "Twenty"
+            },
+            {
+              "achuar": "Kampatam mai uwej",
+              "spanish": "Treinta",
+              "english": "Thirty"
+            },
+            {
+              "achuar": "Yachintiuk mai uwej",
+              "spanish": "Cuarenta",
+              "english": "Forty"
+            },
+            {
+              "achuar": "Uwej mai uwej",
+              "spanish": "Cincuenta",
+              "english": "Fifty"
+            },
+            {
+              "achuar": "Iruk mai uwej",
+              "spanish": "Sesenta",
+              "english": "Sixty"
+            },
+            {
+              "achuar": "Jimia iruk mai uwej",
+              "spanish": "Setenta",
+              "english": "Seventy"
+            },
+            {
+              "achuar": "Mena mai uwej",
+              "spanish": "Ochenta",
+              "english": "Eighty"
+            },
+            {
+              "achuar": "Ipiak mai uwej",
+              "spanish": "Noventa",
+              "english": "Ninety"
+            },
+            {
+              "achuar": "Kuup",
+              "spanish": "Cien",
+              "english": "One hundred"
+            }
+          ]
+        },
+        {
+          "name": "Pronombres (con oraciones)",
+          "entries": [
+            {
+              "achuar": "Wii",
+              "spanish": "Yo",
+              "english": "I"
+            },
+            {
+              "achuar": "Ame",
+              "spanish": "Tu",
+              "english": "You"
+            },
+            {
+              "achuar": "Nii",
+              "spanish": "El/ella",
+              "english": "He/she"
+            },
+            {
+              "achuar": "Ii",
+              "spanish": "Nosotros",
+              "english": "We"
+            },
+            {
+              "achuar": "Atum",
+              "spanish": "Ustedes",
+              "english": "You (plural)"
+            },
+            {
+              "achuar": "Aú",
+              "spanish": "Ellos/ellas",
+              "english": "They"
+            }
+          ]
+        },
+        {
+          "name": "Conjugation de Tener",
+          "entries": [
+            {
+              "achuar": "Takustin",
+              "spanish": "Tener",
+              "english": "To have"
+            },
+            {
+              "achuar": "Wii takakjai",
+              "spanish": "Yo tengo",
+              "english": "I have"
+            },
+            {
+              "achuar": "Ame takakme",
+              "spanish": "Tu tienes",
+              "english": "You have"
+            },
+            {
+              "achuar": "Nii takakuai",
+              "spanish": "El/ella tiene",
+              "english": "He/she has"
+            },
+            {
+              "achuar": "Ii takakji",
+              "spanish": "Nosotros tenemos",
+              "english": "We have"
+            },
+            {
+              "achuar": "Atum takakrume",
+              "spanish": "Ustedes tienen",
+              "english": "You (plural) have"
+            },
+            {
+              "achuar": "Au takakiniawai",
+              "spanish": "Ellos/ellas tienen",
+              "english": "They have"
+            }
+          ]
+        },
+        {
+          "name": "Ejemplos de oraciones",
+          "entries": [
+            {
+              "achuar": "Wii takakjai kichik yatsur/umar",
+              "spanish": "Yo tengo un hermano",
+              "english": "I have one brother"
+            },
+            {
+              "achuar": "Wii takakjai jimiara kair/umar",
+              "spanish": "Yo tengo dos hermanas",
+              "english": "I have two sisters"
+            },
+            {
+              "achuar": "Ame takakmai uwej yachim",
+              "spanish": "Tu tienes cinqo hermanos",
+              "english": "You have five brothers"
+            },
+            {
+              "achuar": "Wii takakjai shuwin jiin",
+              "spanish": "Yo tengo ojos negros",
+              "english": "I have black eyes"
+            },
+            {
+              "achuar": "Wii takakjai yawan",
+              "spanish": "Yo tengo un perro",
+              "english": "I have a dog"
+            },
+            {
+              "achuar": "Winia nukur takakuai kawashun",
+              "spanish": "Mi madre tiene una lora",
+              "english": "My mother has a parrot"
+            },
+            {
+              "achuar": "Atum jintiash pitrume (otra forma)",
+              "spanish": "Ustedes tienen pelo largo",
+              "english": "You (plural) have long hair"
+            }
+          ]
+        },
+        {
+          "name": "Animales de la Selva",
+          "entries": [
+            {
+              "achuar": "Juunt yawa",
+              "spanish": "Jaguar",
+              "english": "Jaguar"
+            },
+            {
+              "achuar": "Yantana",
+              "spanish": "Caiman",
+              "english": "Caiman"
+            },
+            {
+              "achuar": "Kayuk",
+              "spanish": "Aguti",
+              "english": "Agouti"
+            },
+            {
+              "achuar": "Wichin",
+              "spanish": "Ardilla",
+              "english": "Squirrel"
+            },
+            {
+              "achuar": "Pininch",
+              "spanish": "Tucan",
+              "english": "Toucan"
+            },
+            {
+              "achuar": "Waa",
+              "spanish": "Tinamu (o perdiz)",
+              "english": "Tinamou (or partridge)"
+            },
+            {
+              "achuar": "Napi",
+              "spanish": "Culebra",
+              "english": "Snake"
+            },
+            {
+              "achuar": "Makanch",
+              "spanish": "Serpiente equis",
+              "english": "Fer-de-lance snake"
+            },
+            {
+              "achuar": "Panki",
+              "spanish": "Boa",
+              "english": "Boa"
+            },
+            {
+              "achuar": "Tsere",
+              "spanish": "Mono machin",
+              "english": "Capuchin monkey"
+            },
+            {
+              "achuar": "Yakum",
+              "spanish": "Mono aullador",
+              "english": "Howler monkey"
+            },
+            {
+              "achuar": "Tsenkush",
+              "spanish": "Mono ardilla",
+              "english": "Squirrel monkey"
+            },
+            {
+              "achuar": "Chuú",
+              "spanish": "Mono lanudo",
+              "english": "Woolly monkey"
+            },
+            {
+              "achuar": "Apup",
+              "spanish": "Delfin",
+              "english": "Dolphin"
+            },
+            {
+              "achuar": "Kunkuim",
+              "spanish": "Tortuga terrestre",
+              "english": "Land turtle"
+            },
+            {
+              "achuar": "Charap",
+              "spanish": "Tortuga aquatica",
+              "english": "Aquatic turtle"
+            },
+            {
+              "achuar": "Aikiam/tunkau",
+              "spanish": "Bagre",
+              "english": "Catfish"
+            }
+          ]
+        },
+        {
+          "name": "La Clima/Naturaleza",
+          "entries": [
+            {
+              "achuar": "Nayaimp",
+              "spanish": "Cielo",
+              "english": "Sky"
+            },
+            {
+              "achuar": "Yurankim",
+              "spanish": "Nuve",
+              "english": "Cloud"
+            },
+            {
+              "achuar": "Yumi",
+              "spanish": "Lluvia",
+              "english": "Rain"
+            },
+            {
+              "achuar": "Etsaa",
+              "spanish": "Sol",
+              "english": "Sun"
+            },
+            {
+              "achuar": "Nantu",
+              "spanish": "Luna",
+              "english": "Moon"
+            },
+            {
+              "achuar": "Yaa",
+              "spanish": "Estrella",
+              "english": "Star"
+            },
+            {
+              "achuar": "Entsa",
+              "spanish": "Rio",
+              "english": "River"
+            },
+            {
+              "achuar": "Mamus",
+              "spanish": "Laguna",
+              "english": "Lagoon"
+            },
+            {
+              "achuar": "Ikiam",
+              "spanish": "Selva",
+              "english": "Jungle"
+            },
+            {
+              "achuar": "Tunkian",
+              "spanish": "Arcoiris",
+              "english": "Rainbow"
+            },
+            {
+              "achuar": "Yutawai",
+              "spanish": "Esta lluviendo",
+              "english": "It is raining"
+            },
+            {
+              "achuar": "Etsat",
+              "spanish": "Hace sol",
+              "english": "It is sunny"
+            },
+            {
+              "achuar": "Sejkitiai",
+              "spanish": "Hace calor",
+              "english": "It is hot"
+            },
+            {
+              "achuar": "Tsetsekaitiai",
+              "spanish": "Hace frio",
+              "english": "It is cold"
+            },
+            {
+              "achuar": "Nunka",
+              "spanish": "Tierra",
+              "english": "Earth"
+            },
+            {
+              "achuar": "Kaya",
+              "spanish": "Piedra",
+              "english": "Stone"
+            },
+            {
+              "achuar": "Tuna",
+              "spanish": "Cascada",
+              "english": "Waterfall"
+            },
+            {
+              "achuar": "Numi",
+              "spanish": "Arból",
+              "english": "Tree"
+            },
+            {
+              "achuar": "Mentee",
+              "spanish": "Ceibo",
+              "english": "Ceibo tree"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

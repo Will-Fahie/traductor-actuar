@@ -62,13 +62,13 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
                   Container(
                     padding: const EdgeInsets.all(8.0),
                     width: double.infinity,
-                    color: Colors.amber.withOpacity(0.9),
-                    child: const Row(
+                    color: Theme.of(context).colorScheme.error,
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.wifi_off, color: Colors.white, size: 16),
-                        SizedBox(width: 8),
-                        Text('Modo sin conexión', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        Icon(Icons.wifi_off, color: Theme.of(context).colorScheme.onError, size: 16),
+                        const SizedBox(width: 8),
+                        Text('Modo sin conexión', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onError, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
