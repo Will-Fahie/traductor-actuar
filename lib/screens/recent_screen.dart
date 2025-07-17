@@ -18,6 +18,15 @@ class _RecentScreenState extends State<RecentScreen> {
   List<ConnectivityResult> _connectionStatus = [ConnectivityResult.none];
   List<Map<String, dynamic>> _pendingEdits = [];
   bool _isSyncing = false;
+  
+  // New state for infinite scrolling
+  List<DocumentSnapshot> _submissions = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDocument;
+  final int _limit = 20; // Number of documents to fetch per batch
+  final ScrollController _scrollController = ScrollController();
+
 
   @override
   void initState() {
@@ -26,13 +35,80 @@ class _RecentScreenState extends State<RecentScreen> {
     _initConnectivity();
     _connectivitySubscription =
         Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
+    _fetchInitialSubmissions();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _connectivitySubscription.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
+  
+  void _onScroll() {
+    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent && !_isLoading) {
+      _fetchMoreSubmissions();
+    }
+  }
+
+  Future<void> _fetchInitialSubmissions() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('achuar_submission')
+          .orderBy('timestamp', descending: true)
+          .limit(_limit);
+      
+      final snapshot = await query.get();
+      
+      if(mounted) {
+        setState(() {
+          _submissions = snapshot.docs;
+          if (snapshot.docs.isNotEmpty) {
+            _lastDocument = snapshot.docs.last;
+          }
+          _hasMore = snapshot.docs.length == _limit;
+        });
+      }
+    } catch(e) {
+      debugPrint("Error fetching initial submissions: $e");
+    } finally {
+      if(mounted) setState(() => _isLoading = false);
+    }
+  }
+  
+  Future<void> _fetchMoreSubmissions() async {
+    if (_isLoading || !_hasMore) return;
+    setState(() => _isLoading = true);
+    
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('achuar_submission')
+          .orderBy('timestamp', descending: true)
+          .startAfterDocument(_lastDocument!)
+          .limit(_limit);
+          
+      final snapshot = await query.get();
+      
+      if(mounted) {
+        setState(() {
+          _submissions.addAll(snapshot.docs);
+           if (snapshot.docs.isNotEmpty) {
+            _lastDocument = snapshot.docs.last;
+          }
+          _hasMore = snapshot.docs.length == _limit;
+        });
+      }
+    } catch (e) {
+       debugPrint("Error fetching more submissions: $e");
+    } finally {
+       if(mounted) setState(() => _isLoading = false);
+    }
+  }
+
 
   Future<void> _loadPendingEdits() async {
     final prefs = await SharedPreferences.getInstance();
@@ -101,6 +177,46 @@ class _RecentScreenState extends State<RecentScreen> {
     await _savePendingEdits();
   }
 
+  void _showDeleteDialog(BuildContext context, DocumentSnapshot doc) {
+    final passwordController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirmar Eliminación'),
+          content: TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Contraseña'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (passwordController.text == 'pumpkin') {
+                  FirebaseFirestore.instance
+                      .collection('achuar_submission')
+                      .doc(doc.id)
+                      .delete();
+                  Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Contraseña incorrecta')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -108,92 +224,88 @@ class _RecentScreenState extends State<RecentScreen> {
       appBar: AppBar(
         title: const Text('Contribuciones Recientes'),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('achuar_submission')
-            .orderBy('timestamp', descending: true)
-            .limit(50)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No hay contribuciones recientes.'));
-          }
+      body: _submissions.isEmpty && _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : _submissions.isEmpty && !_isLoading
+            ? const Center(child: Text('No hay contribuciones recientes.'))
+            : ListView.builder(
+                controller: _scrollController,
+                itemCount: _submissions.length + (_hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
 
-          final submissions = snapshot.data!.docs;
+                  if (index == _submissions.length) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-          return ListView.builder(
-            itemCount: submissions.length,
-            itemBuilder: (context, index) {
-              final doc = submissions[index];
-              final submission = doc.data() as Map<String, dynamic>;
-              final isPending = _pendingEdits.any((edit) => edit['docId'] == doc.id);
+                  final doc = _submissions[index];
+                  final submission = doc.data() as Map<String, dynamic>;
+                  final isPending = _pendingEdits.any((edit) => edit['docId'] == doc.id);
 
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                elevation: 4,
-                color: isDarkMode ? Colors.grey[800] : Colors.white,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 16), // Adjust padding for button
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Achuar: ${submission['achuar']}',
-                              style: TextStyle(
-                                color: isDarkMode ? Colors.white : Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Español: ${submission['spanish']}',
-                              style: TextStyle(
-                                color: isDarkMode ? Colors.white70 : Colors.black87,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              submission['location'] ?? 'N/A',
-                              style: TextStyle(
-                                color: isDarkMode ? Colors.white70 : Colors.black87,
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                            if (isPending) ...[
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Edición pendiente',
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontStyle: FontStyle.italic,
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    elevation: 4,
+                    color: isDarkMode ? Colors.grey[800] : Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 8, 16), // Adjust padding for button
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Achuar: ${submission['achuar']}',
+                                  style: TextStyle(
+                                    color: isDarkMode ? Colors.white : Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ],
-                        ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Español: ${submission['spanish']}',
+                                  style: TextStyle(
+                                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  submission['location'] ?? 'N/A',
+                                  style: TextStyle(
+                                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                                if (isPending) ...[
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Edición pendiente',
+                                    style: TextStyle(
+                                      color: Colors.orange,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.green),
+                            onPressed: () => _showEditDialog(context, doc),
+                          ),
+                           IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _showDeleteDialog(context, doc),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.green),
-                        onPressed: () => _showEditDialog(context, doc),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                    ),
+                  );
+                },
+              ),
     );
   }
 

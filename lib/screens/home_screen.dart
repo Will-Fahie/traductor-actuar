@@ -25,7 +25,6 @@ class HomeScreen extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -50,6 +49,8 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildGridItem(BuildContext context, String title, IconData icon, String routeName) {
+    bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -59,12 +60,12 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 50, color: Theme.of(context).primaryColor),
+            Icon(icon, size: 50, color: isDarkMode ? Colors.white : Theme.of(context).primaryColor),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDarkMode ? Colors.white : Colors.black),
             ),
           ],
         ),
