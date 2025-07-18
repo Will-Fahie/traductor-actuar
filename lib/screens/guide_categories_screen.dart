@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class GuideCategoriesScreen extends StatelessWidget {
   const GuideCategoriesScreen({super.key});
@@ -15,7 +18,7 @@ class GuideCategoriesScreen extends StatelessWidget {
           _buildCategoryCard(
             context,
             'Aves',
-            Icons.flutter_dash, // Placeholder icon for birds
+            Icons.flutter_dash, 
             () {
               Navigator.pushNamed(context, '/birds');
             },
@@ -24,12 +27,18 @@ class GuideCategoriesScreen extends StatelessWidget {
           _buildCategoryCard(
             context,
             'Mamíferos',
-            Icons.pets, // Placeholder icon for mammals
+            Icons.pets, 
             () {
               Navigator.pushNamed(context, '/mammals');
             },
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _downloadResources(context),
+        tooltip: 'Descargar recursos',
+        icon: const Icon(Icons.download),
+        label: const Text('Descargar'),
       ),
     );
   }
@@ -58,5 +67,34 @@ class GuideCategoriesScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _downloadResources(BuildContext context) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Descargando recursos...')),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final firestore = FirebaseFirestore.instance;
+
+      // Download birds
+      final birdsSnapshot = await firestore.collection('animals_birds').get();
+      final birdsData = birdsSnapshot.docs.map((doc) => doc.data()).toList();
+      await prefs.setString('offline_birds', jsonEncode(birdsData));
+
+      // Download mammals
+      final mammalsSnapshot = await firestore.collection('animals_mammals').get();
+      final mammalsData = mammalsSnapshot.docs.map((doc) => doc.data()).toList();
+      await prefs.setString('offline_mammals', jsonEncode(mammalsData));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Recursos descargados con éxito!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al descargar: $e')),
+      );
+    }
   }
 }

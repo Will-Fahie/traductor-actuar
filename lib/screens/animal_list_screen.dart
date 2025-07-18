@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:collection';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class AnimalListScreen extends StatefulWidget {
   final String collectionName;
@@ -15,9 +17,110 @@ class AnimalListScreen extends StatefulWidget {
 
 class _AnimalListScreenState extends State<AnimalListScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Future<List<Map<String, dynamic>>>? _offlineData;
+
+  @override
+  void initState() {
+    super.initState();
+    _offlineData = _loadOfflineData();
+  }
+
+  Future<List<Map<String, dynamic>>> _loadOfflineData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final offlineDataString = prefs.getString('offline_${widget.collectionName}');
+    if (offlineDataString != null) {
+      final List<dynamic> decodedData = jsonDecode(offlineDataString);
+      return decodedData.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
 
   @override
   Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _offlineData,
+      builder: (context, offlineSnapshot) {
+        if (offlineSnapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(appBar: AppBar(title: Text(widget.title)), body: const Center(child: CircularProgressIndicator()));
+        }
+
+        if (offlineSnapshot.hasData && offlineSnapshot.data!.isNotEmpty) {
+          return _buildOfflineUI(offlineSnapshot.data!);
+        } else {
+          return _buildOnlineUI();
+        }
+      },
+    );
+  }
+
+  Widget _buildOfflineUI(List<Map<String, dynamic>> animals) {
+    final groupedAnimals = groupAnimalsAlphabetically(animals);
+    final sortedKeys = groupedAnimals.keys.toList()..sort();
+
+    return DefaultTabController(
+      length: sortedKeys.isEmpty ? 1 : sortedKeys.length,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                showSearch(
+                  context: context,
+                  delegate: AnimalSearchDelegate(allAnimals: animals, collectionName: widget.collectionName)
+                );
+              },
+            ),
+          ],
+          bottom: sortedKeys.isEmpty ? null : TabBar(
+            isScrollable: true,
+            tabs: sortedKeys.map((letter) => Tab(text: letter)).toList(),
+          ),
+        ),
+        body: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              width: double.infinity,
+              color: Colors.orange,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.download_done, color: Colors.white, size: 16),
+                  const SizedBox(width: 8),
+                  Text('Datos sin conexión', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            if (sortedKeys.isEmpty)
+              const Center(child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text("No se encontraron datos sin conexión.", style: TextStyle(fontSize: 18)),
+              ))
+            else
+              Expanded(
+                child: TabBarView(
+                  children: sortedKeys.map((letter) {
+                    final letterAnimals = groupedAnimals[letter]!;
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(12.0),
+                      itemCount: letterAnimals.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        return AnimalCard(animalData: letterAnimals[index], collectionName: widget.collectionName, docId: letterAnimals[index]['id'] ?? '');
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOnlineUI() {
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore.collection(widget.collectionName).orderBy('mainName').snapshots(includeMetadataChanges: true),
       builder: (context, snapshot) {
@@ -30,7 +133,11 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
         }
 
         final querySnapshot = snapshot.data!;
-        final allAnimals = querySnapshot.docs;
+        final allAnimals = querySnapshot.docs.map((doc) {
+          var data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return data;
+        }).toList();
         final isOffline = querySnapshot.metadata.isFromCache;
         final groupedAnimals = groupAnimalsAlphabetically(allAnimals);
         final sortedKeys = groupedAnimals.keys.toList()..sort();
@@ -92,7 +199,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
                           itemCount: letterAnimals.length,
                           separatorBuilder: (context, index) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            return AnimalCard(animalDoc: letterAnimals[index], collectionName: widget.collectionName);
+                            return AnimalCard(animalData: letterAnimals[index], collectionName: widget.collectionName, docId: letterAnimals[index]['id']);
                           },
                         );
                       }).toList(),
@@ -106,10 +213,10 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
     );
   }
 
-  Map<String, List<QueryDocumentSnapshot>> groupAnimalsAlphabetically(List<QueryDocumentSnapshot> animals) {
-    final map = SplayTreeMap<String, List<QueryDocumentSnapshot>>();
+  Map<String, List<Map<String, dynamic>>> groupAnimalsAlphabetically(List<Map<String, dynamic>> animals) {
+    final map = SplayTreeMap<String, List<Map<String, dynamic>>>();
     for (final animal in animals) {
-      final mainName = (animal.data() as Map<String, dynamic>)['mainName'] as String?;
+      final mainName = animal['mainName'] as String?;
       if (mainName != null && mainName.isNotEmpty) {
         final firstLetter = mainName[0].toUpperCase();
         if (map[firstLetter] == null) {
@@ -123,7 +230,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
 }
 
 class AnimalSearchDelegate extends SearchDelegate {
-  final List<QueryDocumentSnapshot> allAnimals;
+  final List<Map<String, dynamic>> allAnimals;
   final String collectionName;
 
   AnimalSearchDelegate({required this.allAnimals, required this.collectionName});
@@ -170,11 +277,10 @@ class AnimalSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
-    final List<QueryDocumentSnapshot> searchResults = allAnimals.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      final mainName = data['mainName']?.toString().toLowerCase() ?? '';
-      final englishName = data['englishName']?.toString().toLowerCase() ?? '';
-      final spanishName = data['spanishName']?.toString().toLowerCase() ?? '';
+    final List<Map<String, dynamic>> searchResults = allAnimals.where((animal) {
+      final mainName = animal['mainName']?.toString().toLowerCase() ?? '';
+      final englishName = animal['englishName']?.toString().toLowerCase() ?? '';
+      final spanishName = animal['spanishName']?.toString().toLowerCase() ?? '';
       final searchQuery = query.toLowerCase();
 
       return mainName.contains(searchQuery) ||
@@ -193,36 +299,34 @@ class AnimalSearchDelegate extends SearchDelegate {
       itemCount: searchResults.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return AnimalCard(animalDoc: searchResults[index], collectionName: collectionName);
+        return AnimalCard(animalData: searchResults[index], collectionName: collectionName, docId: searchResults[index]['id']);
       },
     );
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    // Show results in real-time as the user types
     return buildResults(context);
   }
 }
 
 
 class AnimalCard extends StatelessWidget {
-  final QueryDocumentSnapshot animalDoc;
+  final Map<String, dynamic> animalData;
   final String collectionName;
+  final String docId;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  AnimalCard({super.key, required this.animalDoc, required this.collectionName});
+  AnimalCard({super.key, required this.animalData, required this.collectionName, required this.docId});
 
   @override
   Widget build(BuildContext context) {
-    final animalData = animalDoc.data() as Map<String, dynamic>;
-    final docId = animalDoc.id;
     final mainName = animalData['mainName'] ?? 'N/A';
     final englishName = animalData['englishName'] ?? 'N/A';
     final spanishName = animalData['spanishName'] ?? 'N/A';
     final imageName = animalData['imageName'] as String?;
-    final bool hasPendingWrites = animalDoc.metadata.hasPendingWrites;
+    final bool hasPendingWrites = (animalData['hasPendingWrites'] as bool?) ?? false;
 
     return Card(
       child: Padding(
