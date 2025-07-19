@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:myapp/screens/home_screen.dart';
 import 'package:myapp/screens/submission_tabs_screen.dart';
 import 'package:myapp/screens/guide_categories_screen.dart';
 import 'package:myapp/screens/animal_list_screen.dart';
 import 'package:myapp/screens/teaching_resources_screen.dart';
 import 'package:myapp/screens/dictionary_screen.dart';
+import 'package:myapp/theme/app_theme.dart';
 import 'firebase_options.dart';
 
 class NotImplementedScreen extends StatelessWidget {
@@ -39,59 +39,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF3A86FF);
-    const lightBackgroundColor = Color(0xFFF7F9FC);
-    const darkBackgroundColor = Color(0xFF1A1A1A);
-    const lightCardColor = Colors.white;
-    const darkCardColor = Color(0xFF2C2C2C);
-
-    final lightTheme = ThemeData(
-      brightness: Brightness.light,
-      primaryColor: primaryColor,
-      colorScheme: ColorScheme.fromSeed(seedColor: primaryColor, brightness: Brightness.light),
-      scaffoldBackgroundColor: lightBackgroundColor,
-      cardColor: lightCardColor,
-      textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme).apply(bodyColor: Colors.black87),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        titleTextStyle: TextStyle(
-          color: Colors.black87,
-          fontWeight: FontWeight.bold,
-          fontSize: 20,
-        ),
-        iconTheme: IconThemeData(color: Colors.black87),
-      ),
-       visualDensity: VisualDensity.adaptivePlatformDensity,
-    );
-
-    final darkTheme = ThemeData(
-      brightness: Brightness.dark,
-      primaryColor: primaryColor,
-      colorScheme: ColorScheme.fromSeed(seedColor: primaryColor, brightness: Brightness.dark),
-      scaffoldBackgroundColor: darkBackgroundColor,
-      cardColor: darkCardColor,
-      textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme).apply(bodyColor: Colors.white),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        titleTextStyle: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 20,
-        ),
-        iconTheme: IconThemeData(color: Colors.white),
-      ),
-      visualDensity: VisualDensity.adaptivePlatformDensity,
-    );
-
     return MaterialApp(
       title: 'Traductor Achuar-Español',
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: ThemeMode.system,
+      theme: AppTheme.theme,
+      themeMode: ThemeMode.light,
       initialRoute: '/',
       routes: {
         '/': (context) => const HomeScreen(),
