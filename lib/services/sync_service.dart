@@ -1,0 +1,242 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
+
+class SyncService {
+  static final SyncService _instance = SyncService._internal();
+  factory SyncService() => _instance;
+  SyncService._internal();
+
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  final _pendingSubmissionsController = StreamController<List<Map<String, dynamic>>>.broadcast();
+  Stream<List<Map<String, dynamic>>> get pendingSubmissionsStream => _pendingSubmissionsController.stream;
+
+  static const String _deviceIdKey = 'deviceId';
+  String? _deviceId;
+
+  Future<void> initialize() async {
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
+
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (!connectivityResult.contains(ConnectivityResult.none)) {
+      debugPrint('Device is online. Syncing pending data.');
+      await syncPendingData();
+    } else {
+      debugPrint('Device is offline.');
+    }
+    await loadPendingSubmissions();
+  }
+
+  void dispose() {
+    _connectivitySubscription.cancel();
+    _pendingSubmissionsController.close();
+  }
+
+  Future<String> getDeviceId() async {
+    if (_deviceId != null) {
+      return _deviceId!;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    var deviceId = prefs.getString(_deviceIdKey);
+
+    if (deviceId == null) {
+      if (kIsWeb) {
+        deviceId = const Uuid().v4();
+      } else {
+        final deviceInfo = DeviceInfoPlugin();
+        if (Platform.isAndroid) {
+          final androidInfo = await deviceInfo.androidInfo;
+          deviceId = androidInfo.id;
+        } else if (Platform.isIOS) {
+          final iosInfo = await deviceInfo.iosInfo;
+          deviceId = iosInfo.identifierForVendor;
+        } else {
+          deviceId = const Uuid().v4();
+        }
+      }
+      await prefs.setString(_deviceIdKey, deviceId!);
+    }
+    
+    _deviceId = deviceId;
+    return _deviceId!;
+  }
+
+  Future<bool> isOffline() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    return connectivityResult.contains(ConnectivityResult.none);
+  }
+
+  void _onConnectivityChanged(List<ConnectivityResult> result) {
+    if (!result.contains(ConnectivityResult.none)) {
+      debugPrint('Device is online. Syncing pending data.');
+      syncPendingData();
+    } else {
+      debugPrint('Device is offline.');
+    }
+  }
+
+  Future<bool> addSubmission(Map<String, dynamic> submission) async {
+    bool isOfflineNow = await isOffline();
+    
+    final submissionWithTimestamp = Map<String, dynamic>.from(submission);
+
+    if (isOfflineNow) {
+      submissionWithTimestamp['timestamp'] = 'FieldValue.serverTimestamp()';
+      await _saveSubmissionLocally(submissionWithTimestamp);
+      return true;
+    } else {
+      try {
+        submissionWithTimestamp['timestamp'] = FieldValue.serverTimestamp();
+        await FirebaseFirestore.instance.collection('achuar_submission').add(submissionWithTimestamp);
+        return false; // Submitted online
+      } catch (e) {
+        debugPrint('Online submission failed, saving locally: $e');
+        submissionWithTimestamp['timestamp'] = 'FieldValue.serverTimestamp()';
+        await _saveSubmissionLocally(submissionWithTimestamp);
+        return true; // Fallback to saving locally
+      }
+    }
+  }
+
+  Future<void> _saveSubmissionLocally(Map<String, dynamic> submission) async {
+    final prefs = await SharedPreferences.getInstance();
+    final pending = prefs.getStringList('pendingSubmissions') ?? [];
+    pending.add(jsonEncode(submission));
+    await prefs.setStringList('pendingSubmissions', pending);
+    await loadPendingSubmissions();
+  }
+
+  Future<void> loadPendingSubmissions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final submissionsValue = prefs.get('pendingSubmissions');
+
+    List<Map<String, dynamic>> pendingSubmissions = [];
+    if (submissionsValue is String) {
+      final decoded = json.decode(submissionsValue);
+      if (decoded is List) {
+        pendingSubmissions = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } else if (submissionsValue is List<String>) {
+      pendingSubmissions = submissionsValue.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
+    }
+    _pendingSubmissionsController.add(pendingSubmissions);
+  }
+
+  Future<void> syncPendingData() async {
+    await _syncPendingSubmissions();
+    await _syncPendingEdits();
+    await loadPendingSubmissions();
+  }
+
+  Future<void> _syncPendingSubmissions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final submissionsValue = prefs.get('pendingSubmissions');
+
+    List<Map<String, dynamic>> pendingSubmissions = [];
+    if (submissionsValue is String) {
+      final decoded = json.decode(submissionsValue);
+      if (decoded is List) {
+        pendingSubmissions = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } else if (submissionsValue is List<String>) {
+      pendingSubmissions = submissionsValue.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
+    }
+
+    if (pendingSubmissions.isEmpty) {
+      return;
+    }
+
+    debugPrint('Syncing ${pendingSubmissions.length} pending submissions.');
+
+    final collection = FirebaseFirestore.instance.collection('achuar_submission');
+    final List<Map<String, dynamic>> successfullySynced = [];
+
+    for (var submission in pendingSubmissions) {
+      try {
+        final submissionData = Map<String, dynamic>.from(submission);
+        if (submissionData['timestamp'] == 'FieldValue.serverTimestamp()') {
+            submissionData['timestamp'] = FieldValue.serverTimestamp();
+        }
+
+        await collection.add(submissionData);
+        successfullySynced.add(submission);
+      } catch (e) {
+        debugPrint('Error syncing submission: $e');
+        break;
+      }
+    }
+
+    if (successfullySynced.isNotEmpty) {
+      final updatedPendingSubmissions = List<Map<String, dynamic>>.from(pendingSubmissions);
+      successfullySynced.forEach((syncedItem) {
+        updatedPendingSubmissions.removeWhere((pendingItem) => 
+            pendingItem['achuar'] == syncedItem['achuar'] && 
+            pendingItem['spanish'] == syncedItem['spanish']);
+      });
+
+      final List<String> remainingSubmissions = updatedPendingSubmissions.map((item) => jsonEncode(item)).toList();
+      await prefs.setStringList('pendingSubmissions', remainingSubmissions);
+      debugPrint('${successfullySynced.length} submissions synced successfully.');
+    }
+  }
+
+  Future<void> _syncPendingEdits() async {
+    final prefs = await SharedPreferences.getInstance();
+    final editsValue = prefs.get('pendingEdits');
+
+    List<Map<String, dynamic>> pendingEdits = [];
+    if (editsValue is String) {
+        final decoded = json.decode(editsValue);
+        if (decoded is List) {
+            pendingEdits = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        }
+    } else if (editsValue is List<String>) {
+        pendingEdits = editsValue.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
+    }
+
+
+    if (pendingEdits.isEmpty) {
+      return;
+    }
+
+    debugPrint('Syncing ${pendingEdits.length} pending edits.');
+
+    final List<Map<String, dynamic>> successfullySynced = [];
+
+    for (var edit in pendingEdits) {
+      try {
+        final docId = edit['docId'];
+        final data = Map<String, dynamic>.from(edit['data']);
+        
+        if (data['last_edited'] == 'FieldValue.serverTimestamp()') {
+            data['last_edited'] = FieldValue.serverTimestamp();
+        }
+
+        await FirebaseFirestore.instance.collection('achuar_dictionary_proposals').doc(docId).update(data);
+        successfullySynced.add(edit);
+      } catch (e) {
+        debugPrint('Error syncing edit: $e');
+        break;
+      }
+    }
+
+    if (successfullySynced.isNotEmpty) {
+      final updatedPendingEdits = List<Map<String, dynamic>>.from(pendingEdits);
+      successfullySynced.forEach((syncedItem) {
+        updatedPendingEdits.removeWhere((pendingItem) => pendingItem['docId'] == syncedItem['docId']);
+      });
+      final List<String> remainingEdits = updatedPendingEdits.map((item) => jsonEncode(item)).toList();
+      await prefs.setStringList('pendingEdits', remainingEdits);
+      debugPrint('${successfullySynced.length} edits synced successfully.');
+    }
+  }
+}

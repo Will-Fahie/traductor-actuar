@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:myapp/services/sync_service.dart';
 
 class RecentScreen extends StatefulWidget {
   const RecentScreen({super.key});
@@ -24,16 +25,12 @@ class _RecentScreenState extends State<RecentScreen>
   String _userName = '';
   final String _editPassword = 'chicha';
 
-  // For 'Your Submissions'
-  Set<String> _localSubmissionIds = {};
+  String? _deviceId;
 
-  // Add a map to hold optimistic UI updates for the 'reviewed' status.
   final Map<String, bool> _optimisticReviewedStatus = {};
 
-  // For Tabs
   TabController? _tabController;
 
-  // For Search
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -45,7 +42,7 @@ class _RecentScreenState extends State<RecentScreen>
     _connectivitySubscription =
         Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
     _loadPendingActions();
-    _loadLocalSubmissionIds();
+    _loadDeviceId();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
@@ -53,28 +50,13 @@ class _RecentScreenState extends State<RecentScreen>
     });
   }
 
-  Future<void> _loadLocalSubmissionIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = prefs.getStringList('localSubmissionIds') ?? [];
-    setState(() {
-      _localSubmissionIds = ids.toSet();
-    });
-  }
-
-  Future<void> _addLocalSubmissionId(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    _localSubmissionIds.add(id);
-    await prefs.setStringList(
-        'localSubmissionIds', _localSubmissionIds.toList());
-    setState(() {});
-  }
-
-  Future<void> _removeLocalSubmissionId(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    _localSubmissionIds.remove(id);
-    await prefs.setStringList(
-        'localSubmissionIds', _localSubmissionIds.toList());
-    setState(() {});
+  Future<void> _loadDeviceId() async {
+    final deviceId = await SyncService().getDeviceId();
+    if (mounted) {
+      setState(() {
+        _deviceId = deviceId;
+      });
+    }
   }
 
   @override
@@ -143,14 +125,12 @@ class _RecentScreenState extends State<RecentScreen>
     final firestore = FirebaseFirestore.instance;
     final batch = firestore.batch();
 
-    // Sync submissions
     for (var sub in _pendingSubmissions) {
       firestore.collection('achuar_submission').add(sub);
     }
     _pendingSubmissions.clear();
     await _savePendingSubmissions();
 
-    // Sync edits
     for (var edit in _pendingEdits) {
       batch.update(firestore.collection('achuar_submission').doc(edit['docId']),
           edit['data'] as Map<String, Object>);
@@ -158,7 +138,6 @@ class _RecentScreenState extends State<RecentScreen>
     _pendingEdits.clear();
     await _savePendingEdits();
 
-    // Sync deletes
     for (var docId in _pendingDeletes) {
       batch.delete(firestore.collection('achuar_submission').doc(docId));
     }
@@ -247,7 +226,6 @@ class _RecentScreenState extends State<RecentScreen>
                         .doc(doc.id)
                         .delete();
                   }
-                  await _removeLocalSubmissionId(doc.id);
                   Navigator.pop(context);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -477,12 +455,10 @@ class _RecentScreenState extends State<RecentScreen>
     );
   }
   
-  // ✨ FIX: Extracted review update logic into its own method to be passed as a callback.
   Future<void> _handleReviewChanged(DocumentSnapshot doc, bool value) async {
     final data = doc.data() as Map<String, dynamic>;
     final originalValue = _optimisticReviewedStatus[doc.id] ?? data['reviewed'] == true;
 
-    // Optimistically update the UI by calling setState.
     setState(() {
       _optimisticReviewedStatus[doc.id] = value;
     });
@@ -509,7 +485,6 @@ class _RecentScreenState extends State<RecentScreen>
             .doc(doc.id)
             .update(reviewData);
       } catch (e) {
-        // Revert the UI change on failure.
         setState(() {
           _optimisticReviewedStatus[doc.id] = originalValue;
         });
@@ -626,25 +601,27 @@ class _RecentScreenState extends State<RecentScreen>
             ),
           ),
           Expanded(
-            // ✨ FIX: Use the new SubmissionsTabView widget which preserves scroll state.
             child: TabBarView(
               controller: _tabController,
               children: [
-                SubmissionsTabView(
-                  isLocal: true,
-                  isEditMode: _isEditMode,
-                  searchQuery: _searchQuery,
-                  localSubmissionIds: _localSubmissionIds,
-                  optimisticReviewedStatus: _optimisticReviewedStatus,
-                  onReviewChanged: _handleReviewChanged,
-                  showEditDialog: (doc) => _showEditDialog(context, doc),
-                  showDeleteDialog: (doc) => _showDeleteDialog(context, doc),
-                ),
+                if (_deviceId != null)
+                  SubmissionsTabView(
+                    isLocal: true,
+                    deviceId: _deviceId!,
+                    isEditMode: _isEditMode,
+                    searchQuery: _searchQuery,
+                    optimisticReviewedStatus: _optimisticReviewedStatus,
+                    onReviewChanged: _handleReviewChanged,
+                    showEditDialog: (doc) => _showEditDialog(context, doc),
+                    showDeleteDialog: (doc) => _showDeleteDialog(context, doc),
+                  ),
+                if (_deviceId == null)
+                  const Center(child: CircularProgressIndicator()),
                 SubmissionsTabView(
                   isLocal: false,
+                  deviceId: '',
                   isEditMode: _isEditMode,
                   searchQuery: _searchQuery,
-                  localSubmissionIds: _localSubmissionIds,
                   optimisticReviewedStatus: _optimisticReviewedStatus,
                   onReviewChanged: _handleReviewChanged,
                   showEditDialog: (doc) => _showEditDialog(context, doc),
@@ -659,12 +636,11 @@ class _RecentScreenState extends State<RecentScreen>
   }
 }
 
-// ✨ FIX: Created a new StatefulWidget to hold the list and preserve its state.
 class SubmissionsTabView extends StatefulWidget {
   final bool isLocal;
+  final String deviceId;
   final bool isEditMode;
   final String searchQuery;
-  final Set<String> localSubmissionIds;
   final Map<String, bool> optimisticReviewedStatus;
   final Future<void> Function(DocumentSnapshot doc, bool value) onReviewChanged;
   final void Function(DocumentSnapshot doc) showEditDialog;
@@ -673,9 +649,9 @@ class SubmissionsTabView extends StatefulWidget {
   const SubmissionsTabView({
     super.key,
     required this.isLocal,
+    required this.deviceId,
     required this.isEditMode,
     required this.searchQuery,
-    required this.localSubmissionIds,
     required this.optimisticReviewedStatus,
     required this.onReviewChanged,
     required this.showEditDialog,
@@ -687,19 +663,17 @@ class SubmissionsTabView extends StatefulWidget {
 }
 
 class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticKeepAliveClientMixin {
-  // ✨ FIX: This tells Flutter to keep this widget's state alive.
   @override
   bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    // ✨ FIX: Important call for AutomaticKeepAliveClientMixin.
     super.build(context);
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return StreamBuilder<QuerySnapshot>(
-      key: ValueKey<String>(widget.isLocal ? 'local' : 'all'),
+      key: ValueKey<String>(widget.isLocal ? 'local_${widget.deviceId}' : 'all'),
       stream: FirebaseFirestore.instance
           .collection('achuar_submission')
           .orderBy('timestamp', descending: true)
@@ -750,37 +724,41 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
         var docs = snapshot.data?.docs ?? [];
 
         if (widget.isLocal) {
-          docs = docs.where((doc) => widget.localSubmissionIds.contains(doc.id)).toList();
-          if (docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    size: 64,
-                    color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
+          docs = docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['deviceId'] == widget.deviceId;
+          }).toList();
+        }
+
+        if (docs.isEmpty && widget.isLocal) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.inbox_outlined,
+                  size: 64,
+                  color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No hay contribuciones recientes',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay contribuciones recientes',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'en este dispositivo',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'en este dispositivo',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
+                ),
+              ],
+            ),
+          );
         }
 
         if (widget.searchQuery.isNotEmpty) {
@@ -831,7 +809,7 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
   Widget _buildListItem(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final bool isReviewed = widget.optimisticReviewedStatus[doc.id] ?? data['reviewed'] == true;
-    final bool isLocal = widget.localSubmissionIds.contains(doc.id);
+    final bool isOwner = data['deviceId'] == widget.deviceId;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -917,7 +895,7 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
                         ],
                       ),
                     ),
-                    if (widget.isEditMode || isLocal) ...[
+                    if (widget.isEditMode || isOwner) ...[
                       const SizedBox(width: 8),
                       Column(
                         children: [

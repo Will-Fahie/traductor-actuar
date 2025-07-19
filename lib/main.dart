@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:myapp/screens/home_screen.dart';
 import 'package:myapp/screens/submission_tabs_screen.dart';
 import 'package:myapp/screens/guide_categories_screen.dart';
 import 'package:myapp/screens/animal_list_screen.dart';
 import 'package:myapp/screens/teaching_resources_screen.dart';
 import 'package:myapp/screens/dictionary_screen.dart';
+import 'package:myapp/screens/translator_screen.dart';
+import 'package:myapp/screens/loading_screen.dart';
 import 'package:myapp/theme/app_theme.dart';
-import 'firebase_options.dart';
 
 class NotImplementedScreen extends StatelessWidget {
   final String featureName;
@@ -23,14 +23,8 @@ class NotImplementedScreen extends StatelessWidget {
   }
 }
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  if (kDebugMode) {
-    // Enable debug-specific features
-  }
   runApp(const MyApp());
 }
 
@@ -43,12 +37,13 @@ class MyApp extends StatelessWidget {
       title: 'Traductor Achuar-Español',
       theme: AppTheme.theme,
       themeMode: ThemeMode.light,
-      initialRoute: '/',
+      initialRoute: '/loading',
       routes: {
+        '/loading': (context) => const LoadingScreen(),
         '/': (context) => const HomeScreen(),
         '/dictionary': (context) => const DictionaryScreen(),
         '/submit': (context) => const SubmissionTabsScreen(),
-        '/translator': (context) => const NotImplementedScreen(featureName: 'Traductor'),
+        '/translator': (context) => const TranslatorScreen(),
         '/teaching_resources': (context) => const TeachingResourcesScreen(),
         '/guide_resources': (context) => const GuideCategoriesScreen(),
         '/ecolodge_resources': (context) => const NotImplementedScreen(featureName: 'Recursos de Ecolodge'),
