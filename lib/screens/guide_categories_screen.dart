@@ -45,8 +45,6 @@ class GuideCategoriesScreen extends StatelessWidget {
 
   Widget _buildCategoryCard(BuildContext context, String title, IconData icon, VoidCallback onTap) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -56,11 +54,12 @@ class GuideCategoriesScreen extends StatelessWidget {
             children: [
               Icon(icon, size: 40, color: Theme.of(context).primaryColor),
               const SizedBox(width: 24),
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
               ),
-              const Spacer(),
               const Icon(Icons.arrow_forward_ios),
             ],
           ),

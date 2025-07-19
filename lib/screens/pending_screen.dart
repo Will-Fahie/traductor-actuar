@@ -22,12 +22,35 @@ class _PendingScreenState extends State<PendingScreen> {
 
   Future<void> _loadPendingData() async {
     final prefs = await SharedPreferences.getInstance();
-    final submissions = prefs.getStringList('pendingSubmissions') ?? [];
-    final edits = prefs.getStringList('pendingEdits') ?? [];
+
+    // Handle pendingSubmissions
+    final submissionsValue = prefs.get('pendingSubmissions');
+    List<Map<String, dynamic>> submissionsList = [];
+    if (submissionsValue is String) {
+      final decoded = json.decode(submissionsValue);
+      if (decoded is List) {
+        submissionsList = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } else if (submissionsValue is List<String>) {
+      submissionsList = submissionsValue.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
+    }
+
+    // Handle pendingEdits
+    final editsValue = prefs.get('pendingEdits');
+    List<Map<String, dynamic>> editsList = [];
+    if (editsValue is String) {
+      final decoded = json.decode(editsValue);
+      if (decoded is List) {
+        editsList = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } else if (editsValue is List<String>) {
+      editsList = editsValue.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
+    }
+
     if (mounted) {
       setState(() {
-        _pendingSubmissions = submissions.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
-        _pendingEdits = edits.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
+        _pendingSubmissions = submissionsList;
+        _pendingEdits = editsList;
       });
     }
   }

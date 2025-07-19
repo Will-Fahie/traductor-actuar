@@ -14,7 +14,6 @@ class SubmitScreen extends StatefulWidget {
 
 class _SubmitScreenState extends State<SubmitScreen> {
   String? _selectedLocation;
-  String? _selectedCategory;
 
   final List<String> _locations = [
     'Comunidad Kapawi',
@@ -22,13 +21,6 @@ class _SubmitScreenState extends State<SubmitScreen> {
     'Comunidad Suwa',
     'Kapawi Ecolodge',
     'Colegio Tuna'
-  ];
-  final List<String> _categories = [
-    'Frases y palabras básicas',
-    'Ecoturismo',
-    'Fauna silvestre',
-    'Estilo de vida',
-    'Otro'
   ];
 
   final TextEditingController _achuarController = TextEditingController();
@@ -52,15 +44,37 @@ class _SubmitScreenState extends State<SubmitScreen> {
   @override
   void dispose() {
     _connectivitySubscription.cancel();
+    _achuarController.dispose();
+    _spanishController.dispose();
+    _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _addLocalSubmissionId(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList('localSubmissionIds') ?? [];
+    if (!ids.contains(id)) {
+      ids.add(id);
+      await prefs.setStringList('localSubmissionIds', ids);
+    }
   }
 
   Future<void> _loadPendingSubmissions() async {
     final prefs = await SharedPreferences.getInstance();
-    final pending = prefs.getStringList('pendingSubmissions') ?? [];
+    final pendingValue = prefs.get('pendingSubmissions');
+    List<Map<String, dynamic>> pendingList = [];
+    if (pendingValue is String) {
+      final decoded = json.decode(pendingValue);
+      if (decoded is List) {
+        pendingList = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } else if (pendingValue is List<String>) {
+      pendingList = pendingValue.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
+    }
+
     if (mounted) {
       setState(() {
-        _pendingSubmissions = pending.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
+        _pendingSubmissions = pendingList;
       });
     }
   }
@@ -97,42 +111,42 @@ class _SubmitScreenState extends State<SubmitScreen> {
   }
 
   void _syncPendingSubmissions() async {
-  if (_isSyncing || _pendingSubmissions.isEmpty) {
-    return;
-  }
-  if (mounted) {
-    setState(() {
-      _isSyncing = true;
-    });
-  }
+    if (_isSyncing || _pendingSubmissions.isEmpty) {
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        _isSyncing = true;
+      });
+    }
 
-  List<Map<String, dynamic>> submissionsToSync = List.from(_pendingSubmissions);
-  _pendingSubmissions.clear();
-  await _savePendingSubmissions();
+    List<Map<String, dynamic>> submissionsToSync = List.from(_pendingSubmissions);
+    _pendingSubmissions.clear();
+    await _savePendingSubmissions();
 
-
-  for (var submission in submissionsToSync) {
-    try {
-      final Map<String, dynamic> submissionWithTimestamp = Map<String, dynamic>.from(submission);
-      submissionWithTimestamp['timestamp'] = FieldValue.serverTimestamp();
-      await FirebaseFirestore.instance.collection('achuar_submission').add(submissionWithTimestamp);
-    } catch (e) {
-      debugPrint("Error syncing submission: $e");
-      if(mounted){
-        setState(() {
-          _pendingSubmissions.add(submission);
-        });
+    for (var submission in submissionsToSync) {
+      try {
+        final Map<String, dynamic> submissionWithTimestamp = Map<String, dynamic>.from(submission);
+        submissionWithTimestamp['timestamp'] = FieldValue.serverTimestamp();
+        final docRef = await FirebaseFirestore.instance.collection('achuar_submission').add(submissionWithTimestamp);
+        await _addLocalSubmissionId(docRef.id);
+      } catch (e) {
+        debugPrint("Error syncing submission: $e");
+        if(mounted){
+          setState(() {
+            _pendingSubmissions.add(submission);
+          });
+        }
       }
     }
-  }
 
-  if (mounted) {
-    setState(() {
-      _isSyncing = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isSyncing = false;
+      });
+    }
+    await _savePendingSubmissions();
   }
-  await _savePendingSubmissions();
-}
 
   void _submit() async {
     if (_achuarController.text.isNotEmpty && _spanishController.text.isNotEmpty) {
@@ -141,7 +155,6 @@ class _SubmitScreenState extends State<SubmitScreen> {
         'spanish': _spanishController.text,
         'notes': _notesController.text,
         'location': _selectedLocation,
-        'category': _selectedCategory,
       };
 
       if (_connectionStatus.contains(ConnectivityResult.none)) {
@@ -157,7 +170,8 @@ class _SubmitScreenState extends State<SubmitScreen> {
         try {
           final submissionWithTimestamp = Map<String, dynamic>.from(submission);
           submissionWithTimestamp['timestamp'] = FieldValue.serverTimestamp();
-          await FirebaseFirestore.instance.collection('achuar_submission').add(submissionWithTimestamp);
+          final docRef = await FirebaseFirestore.instance.collection('achuar_submission').add(submissionWithTimestamp);
+          await _addLocalSubmissionId(docRef.id);
           _clearForm();
           _showConfirmationDialog();
         } catch (e) {
@@ -177,20 +191,60 @@ class _SubmitScreenState extends State<SubmitScreen> {
     _achuarController.clear();
     _spanishController.clear();
     _notesController.clear();
+    setState(() {
+      _selectedLocation = null;
+    });
   }
 
   void _showConfirmationDialog({bool isOffline = false}) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(isOffline ? 'Guardado localmente' : 'Éxito'),
-          content: Text(isOffline
-              ? 'Tu contribución ha sido guardada y se subirá automáticamente cuando te conectes a internet.'
-              : 'Tu contribución ha sido enviada con éxito.'),
+          backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          icon: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: isOffline ? Colors.orange.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: Icon(
+              isOffline ? Icons.cloud_off : Icons.cloud_done,
+              color: isOffline ? Colors.orange : Colors.green,
+              size: 32,
+            ),
+          ),
+          title: Text(
+            isOffline ? 'Guardado localmente' : 'Éxito',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.black87,
+            ),
+          ),
+          content: Text(
+            isOffline
+                ? 'Tu contribución ha sido guardada y se subirá automáticamente cuando te conectes a internet.'
+                : 'Tu contribución ha sido enviada con éxito.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+            ),
+          ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cerrar'),
+              child: Text(
+                'Cerrar',
+                style: TextStyle(
+                  color: isDarkMode ? const Color(0xFF88B0D3) : const Color(0xFF6B5B95),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -203,41 +257,169 @@ class _SubmitScreenState extends State<SubmitScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    bool isOffline = _connectionStatus.contains(ConnectivityResult.none);
+    
     return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('Traductor Achuar-Español'),
+        title: const Text(
+          'Envío de Frases',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        elevation: 0,
+        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTextField('Frase en Achuar', _achuarController),
-              const SizedBox(height: 20),
-              _buildTextField('Frase en Español', _spanishController),
-              const SizedBox(height: 20),
-              _buildDropdown('Seleccione una ubicación', _selectedLocation, _locations, (newValue) {
-                if (mounted) {
-                  setState(() {
-                    _selectedLocation = newValue;
-                  });
-                }
-              }),
-              const SizedBox(height: 20),
-              _buildDropdown('Seleccione una categoría', _selectedCategory, _categories, (newValue) {
-                if (mounted) {
-                  setState(() {
-                    _selectedCategory = newValue;
-                  });
-                }
-              }),
-              const SizedBox(height: 20),
-              _buildTextField('Notas (Opcional)', _notesController),
-              const SizedBox(height: 30),
-              _buildSubmitButton(),
-              const SizedBox(height: 30),
-              _buildStatusSection(),
+              // Header section
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF88B0D3),
+                                Color(0xFF6B8CAE),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.send,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Contribuye al diccionario',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ayúdanos a expandir el traductor Achuar-Español',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Connection status
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isOffline 
+                            ? Colors.orange.withOpacity(0.1) 
+                            : Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isOffline ? Icons.wifi_off : Icons.wifi,
+                            color: isOffline ? Colors.orange : Colors.green,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isOffline ? 'Modo sin conexión' : 'En línea',
+                            style: TextStyle(
+                              color: isOffline ? Colors.orange : Colors.green,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_pendingSubmissions.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '${_pendingSubmissions.length} ${_pendingSubmissions.length == 1 ? 'contribución pendiente' : 'contribuciones pendientes'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              // Form section
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle('Frase en Achuar', Icons.language),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: _achuarController,
+                      hint: 'Ingrese la frase en Achuar',
+                      isDarkMode: isDarkMode,
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    _buildSectionTitle('Frase en Español', Icons.translate),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: _spanishController,
+                      hint: 'Ingrese la traducción en Español',
+                      isDarkMode: isDarkMode,
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    _buildSectionTitle('Ubicación', Icons.location_on),
+                    const SizedBox(height: 8),
+                    _buildDropdown(isDarkMode),
+                    const SizedBox(height: 24),
+                    
+                    _buildSectionTitle('Notas adicionales', Icons.note),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: _notesController,
+                      hint: 'Agregue cualquier información adicional (opcional)',
+                      isDarkMode: isDarkMode,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    _buildSubmitButton(isDarkMode),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -245,125 +427,166 @@ class _SubmitScreenState extends State<SubmitScreen> {
     );
   }
 
-  Widget _buildStatusSection() {
-    bool isOffline = _connectionStatus.contains(ConnectivityResult.none);
+  Widget _buildSectionTitle(String title, IconData icon) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(isOffline ? Icons.wifi_off : Icons.wifi, color: isOffline ? Colors.red : Colors.green),
+        Icon(
+          icon,
+          size: 20,
+          color: const Color(0xFF88B0D3),
+        ),
         const SizedBox(width: 8),
-        Text(isOffline ? 'Desconectado' : 'En línea',
-            style: TextStyle(color: isOffline ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: isDarkMode ? Colors.white : Colors.black87,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildDropdown(String hint, String? value, List<String> items, ValueChanged<String?> onChanged) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[800] : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.green.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          hint: Text(hint, style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.grey)),
-          value: value,
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.green),
-          dropdownColor: isDarkMode ? Colors.grey[800] : Colors.white,
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-                      softWrap: true,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required bool isDarkMode,
+    int maxLines = 1,
+  }) {
     return Container(
       decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
-        borderRadius: BorderRadius.circular(12),
       ),
       child: TextField(
         controller: controller,
-        maxLines: null,
-        style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+        maxLines: maxLines,
+        style: TextStyle(
+          color: isDarkMode ? Colors.white : Colors.black87,
+        ),
         decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: isDarkMode ? Colors.white70 : Colors.grey),
+          hintText: hint,
+          hintStyle: TextStyle(
+            color: isDarkMode ? Colors.grey[600] : Colors.grey[500],
+          ),
           filled: true,
-          fillColor: isDarkMode ? Colors.grey[800] : Colors.white,
+          fillColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+          contentPadding: const EdgeInsets.all(16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.green, width: 2),
+            borderSide: BorderSide(
+              color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+              width: 1,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.green[700]!, width: 2),
+            borderSide: const BorderSide(
+              color: Color(0xFF88B0D3),
+              width: 2,
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildDropdown(bool isDarkMode) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: ButtonTheme(
+          alignedDropdown: true,
+          child: DropdownButton<String>(
+            isExpanded: true,
+            hint: Text(
+              'Seleccione una ubicación',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[600] : Colors.grey[500],
+              ),
+            ),
+            value: _selectedLocation,
+            icon: Icon(
+              Icons.arrow_drop_down,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            ),
+            dropdownColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+            style: TextStyle(
+              color: isDarkMode ? Colors.white : Colors.black87,
+              fontSize: 16,
+            ),
+            items: _locations.map((String location) {
+              return DropdownMenuItem<String>(
+                value: location,
+                child: Text(location),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedLocation = newValue;
+              });
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(bool isDarkMode) {
     return SizedBox(
       width: double.infinity,
+      height: 56,
       child: ElevatedButton(
         onPressed: _submit,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          backgroundColor: const Color(0xFF88B0D3),
+          foregroundColor: Colors.white,
+          elevation: 4,
+          shadowColor: const Color(0xFF88B0D3).withOpacity(0.4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 5,
         ),
-        child: const Text(
-          'Enviar',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.send, size: 20),
+            const SizedBox(width: 8),
+            const Text(
+              'Enviar contribución',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
