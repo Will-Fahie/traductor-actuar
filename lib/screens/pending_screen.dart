@@ -61,30 +61,60 @@ class _PendingScreenState extends State<PendingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Elementos Pendientes'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadPendingData,
+            tooltip: 'Refrescar',
+          ),
+        ],
       ),
       body: (_pendingSubmissions.isEmpty && _pendingEdits.isEmpty)
-          ? const Center(child: Text('No hay elementos pendientes.'))
-          : ListView(
-              children: [
-                if (_pendingSubmissions.isNotEmpty)
-                  _buildSectionTitle('Contribuciones Pendientes'),
-                ..._pendingSubmissions.map((submission) =>
-                  _buildSubmissionCard(submission, isDarkMode)),
-                if (_pendingEdits.isNotEmpty)
-                  _buildSectionTitle('Ediciones Pendientes'),
-                ..._pendingEdits.map((edit) =>
-                  _buildEditCard(edit, isDarkMode)),
-              ],
-            ),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 64,
+                    color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No hay elementos pendientes',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+            onRefresh: _loadPendingData,
+            child: ListView(
+                padding: const EdgeInsets.all(8),
+                children: [
+                  if (_pendingSubmissions.isNotEmpty)
+                    _buildSectionTitle('Contribuciones Pendientes'),
+                  ..._pendingSubmissions.map((submission) =>
+                    _buildSubmissionCard(submission, isDarkMode)),
+                  if (_pendingEdits.isNotEmpty)
+                    _buildSectionTitle('Ediciones Pendientes'),
+                  ..._pendingEdits.map((edit) =>
+                    _buildEditCard(edit, isDarkMode)),
+                ],
+              ),
+          ),
     );
   }
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
       ),
     );
   }
@@ -92,8 +122,11 @@ class _PendingScreenState extends State<PendingScreen> {
   Widget _buildSubmissionCard(Map<String, dynamic> submission, bool isDarkMode) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      elevation: 4,
-      color: isDarkMode ? Colors.grey[800] : Colors.white,
+      elevation: isDarkMode ? 2 : 3,
+      color: isDarkMode ? Colors.grey[850] : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -125,8 +158,11 @@ class _PendingScreenState extends State<PendingScreen> {
     final data = edit['data'] as Map<String, dynamic>;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      elevation: 4,
-      color: isDarkMode ? Colors.grey[800] : Colors.white,
+      elevation: isDarkMode ? 2 : 3,
+      color: isDarkMode ? Colors.grey[850] : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

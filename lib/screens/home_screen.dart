@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -6,90 +7,98 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Set the system UI overlay style
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent, // Make the status bar transparent
+      statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
+    ));
     
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
-      body: ListView(
-        padding: const EdgeInsets.only(top: 20),
-        children: [
-          // Welcome message
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Winiajai!',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.only(top: 40), // Increased top padding
+          children: [
+            // Welcome message
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Winiajai!',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Explora las herramientas de traducción y recursos educativos.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Explora las herramientas de traducción y recursos educativos.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
-          ),
-          
-          // Menu items
-          _buildMenuItem(
-            context,
-            title: 'Diccionario',
-            subtitle: 'Busca palabras y sus significados',
-            icon: Icons.book,
-            routeName: '/dictionary',
-            color: const Color(0xFF6B5B95),
-          ),
-          _buildMenuItem(
-            context,
-            title: 'Envío de Frases',
-            subtitle: 'Comparte nuevas frases para traducir',
-            icon: Icons.send,
-            routeName: '/submit',
-            color: const Color(0xFF88B0D3),
-          ),
-          _buildMenuItem(
-            context,
-            title: 'Traductor',
-            subtitle: 'Traduce texto instantáneamente',
-            icon: Icons.translate,
-            routeName: '/translator',
-            color: const Color(0xFF82B366),
-          ),
-          _buildMenuItem(
-            context,
-            title: 'Recursos de Enseñanza',
-            subtitle: 'Material educativo y lecciones',
-            icon: Icons.school,
-            routeName: '/teaching_resources',
-            color: const Color(0xFFFA6900),
-          ),
-          _buildMenuItem(
-            context,
-            title: 'Recursos de Guía',
-            subtitle: 'Guías y documentación útil',
-            icon: Icons.map,
-            routeName: '/guide_resources',
-            color: const Color(0xFFF38630),
-          ),
-          _buildMenuItem(
-            context,
-            title: 'Recursos de Ecolodge',
-            subtitle: 'Información sobre ecoturismo',
-            icon: Icons.eco,
-            routeName: '/ecolodge_resources',
-            color: const Color(0xFF69D2E7),
-          ),
-          const SizedBox(height: 20), // Bottom padding
-        ],
+            
+            // Menu items
+            _buildMenuItem(
+              context,
+              title: 'Diccionario',
+              subtitle: 'Busca palabras y sus significados',
+              icon: Icons.book,
+              routeName: '/dictionary',
+              color: const Color(0xFF6B5B95),
+            ),
+            _buildMenuItem(
+              context,
+              title: 'Envío de Frases',
+              subtitle: 'Comparte nuevas frases para traducir',
+              icon: Icons.send,
+              routeName: '/submit',
+              color: const Color(0xFF88B0D3),
+            ),
+            _buildMenuItem(
+              context,
+              title: 'Traductor',
+              subtitle: 'Traduce texto instantáneamente',
+              icon: Icons.translate,
+              routeName: '/translator',
+              color: const Color(0xFF82B366),
+            ),
+            _buildMenuItem(
+              context,
+              title: 'Recursos de Enseñanza',
+              subtitle: 'Material educativo y lecciones',
+              icon: Icons.school,
+              routeName: '/teaching_resources',
+              color: const Color(0xFFFA6900),
+            ),
+            _buildMenuItem(
+              context,
+              title: 'Recursos de Guía',
+              subtitle: 'Guías y documentación útil',
+              icon: Icons.map,
+              routeName: '/guide_resources',
+              color: const Color(0xFFF38630),
+            ),
+            _buildMenuItem(
+              context,
+              title: 'Recursos de Ecolodge',
+              subtitle: 'Información sobre ecoturismo',
+              icon: Icons.eco,
+              routeName: '/ecolodge_resources',
+              color: const Color(0xFF69D2E7),
+            ),
+            const SizedBox(height: 20), // Bottom padding
+          ],
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:myapp/services/sync_service.dart'; // Import the SyncService
 
 class SubmitScreen extends StatefulWidget {
   const SubmitScreen({super.key});
@@ -27,22 +28,38 @@ class _SubmitScreenState extends State<SubmitScreen> {
   final TextEditingController _spanishController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
-  List<ConnectivityResult> _connectionStatus = [ConnectivityResult.none];
+  bool _isOffline = true;
   List<Map<String, dynamic>> _pendingSubmissions = [];
-  bool _isSyncing = false;
+  late StreamSubscription<List<Map<String, dynamic>>> _pendingSubmissionsSubscription;
   late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadPendingSubmissions();
-    _initConnectivity();
-    _connectivitySubscription =
-        Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
+    _checkInitialConnectivity();
+
+    _pendingSubmissionsSubscription = SyncService().pendingSubmissionsStream.listen((pending) {
+      if (mounted) {
+        setState(() {
+          _pendingSubmissions = pending;
+        });
+      }
+    });
+
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
+      if (mounted) {
+        setState(() {
+          _isOffline = result.contains(ConnectivityResult.none);
+        });
+      }
+    });
+
+    SyncService().loadPendingSubmissions();
   }
 
   @override
   void dispose() {
+    _pendingSubmissionsSubscription.cancel();
     _connectivitySubscription.cancel();
     _achuarController.dispose();
     _spanishController.dispose();
@@ -50,141 +67,36 @@ class _SubmitScreenState extends State<SubmitScreen> {
     super.dispose();
   }
 
-  Future<void> _addLocalSubmissionId(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = prefs.getStringList('localSubmissionIds') ?? [];
-    if (!ids.contains(id)) {
-      ids.add(id);
-      await prefs.setStringList('localSubmissionIds', ids);
-    }
-  }
-
-  Future<void> _loadPendingSubmissions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final pendingValue = prefs.get('pendingSubmissions');
-    List<Map<String, dynamic>> pendingList = [];
-    if (pendingValue is String) {
-      final decoded = json.decode(pendingValue);
-      if (decoded is List) {
-        pendingList = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
-      }
-    } else if (pendingValue is List<String>) {
-      pendingList = pendingValue.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
-    }
-
+  Future<void> _checkInitialConnectivity() async {
+    final result = await Connectivity().checkConnectivity();
     if (mounted) {
       setState(() {
-        _pendingSubmissions = pendingList;
+        _isOffline = result.contains(ConnectivityResult.none);
       });
     }
   }
-
-  Future<void> _savePendingSubmissions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final pending = _pendingSubmissions.map((s) => jsonEncode(s)).toList();
-    await prefs.setStringList('pendingSubmissions', pending);
-  }
-
-  Future<void> _initConnectivity() async {
-    late List<ConnectivityResult> result;
-    try {
-      result = await Connectivity().checkConnectivity();
-    } catch (e) {
-      debugPrint("Couldn't check connectivity status: $e");
-      return;
-    }
-    if (!mounted) {
-      return;
-    }
-    return _updateConnectionStatus(result);
-  }
-
-  Future<void> _updateConnectionStatus(List<ConnectivityResult> result) async {
-    if (mounted) {
-      setState(() {
-        _connectionStatus = result;
-      });
-    }
-    if (!_connectionStatus.contains(ConnectivityResult.none)) {
-      _syncPendingSubmissions();
-    }
-  }
-
-  void _syncPendingSubmissions() async {
-    if (_isSyncing || _pendingSubmissions.isEmpty) {
-      return;
-    }
-    if (mounted) {
-      setState(() {
-        _isSyncing = true;
-      });
-    }
-
-    List<Map<String, dynamic>> submissionsToSync = List.from(_pendingSubmissions);
-    _pendingSubmissions.clear();
-    await _savePendingSubmissions();
-
-    for (var submission in submissionsToSync) {
-      try {
-        final Map<String, dynamic> submissionWithTimestamp = Map<String, dynamic>.from(submission);
-        submissionWithTimestamp['timestamp'] = FieldValue.serverTimestamp();
-        final docRef = await FirebaseFirestore.instance.collection('achuar_submission').add(submissionWithTimestamp);
-        await _addLocalSubmissionId(docRef.id);
-      } catch (e) {
-        debugPrint("Error syncing submission: $e");
-        if(mounted){
-          setState(() {
-            _pendingSubmissions.add(submission);
-          });
-        }
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _isSyncing = false;
-      });
-    }
-    await _savePendingSubmissions();
-  }
-
+  
   void _submit() async {
-    if (_achuarController.text.isNotEmpty && _spanishController.text.isNotEmpty) {
-      final submission = {
-        'achuar': _achuarController.text,
-        'spanish': _spanishController.text,
-        'notes': _notesController.text,
-        'location': _selectedLocation,
-      };
-
-      if (_connectionStatus.contains(ConnectivityResult.none)) {
-        if (mounted) {
-          setState(() {
-            _pendingSubmissions.add(submission);
-          });
-        }
-        await _savePendingSubmissions();
-        _clearForm();
-        _showConfirmationDialog(isOffline: true);
-      } else {
-        try {
-          final submissionWithTimestamp = Map<String, dynamic>.from(submission);
-          submissionWithTimestamp['timestamp'] = FieldValue.serverTimestamp();
-          final docRef = await FirebaseFirestore.instance.collection('achuar_submission').add(submissionWithTimestamp);
-          await _addLocalSubmissionId(docRef.id);
-          _clearForm();
-          _showConfirmationDialog();
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al enviar la contribución: $e')),
-          );
-        }
-      }
-    } else {
+    if (_achuarController.text.isEmpty || _spanishController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor, complete los campos obligatorios')),
       );
+      return;
     }
+
+    final deviceId = await SyncService().getDeviceId();
+    final submission = {
+      'achuar': _achuarController.text,
+      'spanish': _spanishController.text,
+      'notes': _notesController.text,
+      'location': _selectedLocation,
+      'deviceId': deviceId,
+    };
+
+    final wasSavedLocally = await SyncService().addSubmission(submission);
+    
+    _clearForm();
+    _showConfirmationDialog(isOffline: wasSavedLocally);
   }
 
   void _clearForm() {
@@ -258,7 +170,6 @@ class _SubmitScreenState extends State<SubmitScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    bool isOffline = _connectionStatus.contains(ConnectivityResult.none);
     
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
@@ -274,7 +185,6 @@ class _SubmitScreenState extends State<SubmitScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Header section
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -334,11 +244,10 @@ class _SubmitScreenState extends State<SubmitScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Connection status
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isOffline 
+                        color: _isOffline 
                             ? Colors.orange.withOpacity(0.1) 
                             : Colors.green.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
@@ -347,15 +256,15 @@ class _SubmitScreenState extends State<SubmitScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isOffline ? Icons.wifi_off : Icons.wifi,
-                            color: isOffline ? Colors.orange : Colors.green,
+                            _isOffline ? Icons.wifi_off : Icons.wifi,
+                            color: _isOffline ? Colors.orange : Colors.green,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            isOffline ? 'Modo sin conexión' : 'En línea',
+                            _isOffline ? 'Modo sin conexión' : 'En línea',
                             style: TextStyle(
-                              color: isOffline ? Colors.orange : Colors.green,
+                              color: _isOffline ? Colors.orange : Colors.green,
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                             ),
@@ -377,7 +286,6 @@ class _SubmitScreenState extends State<SubmitScreen> {
                 ),
               ),
               
-              // Form section
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
