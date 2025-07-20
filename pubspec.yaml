@@ -93,7 +93,6 @@ flutter:
     - lessons.json
     - dictionary.json
     - assets/audio/level_1/numbers/
-    - assets/audio/level_1/animals/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
