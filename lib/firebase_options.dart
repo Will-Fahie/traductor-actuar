@@ -23,10 +23,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -61,6 +58,14 @@ class DefaultFirebaseOptions {
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyA4o2Si9GIsyEMZtg5DU_9G1JeYHgD-v-4',
     appId: '1:122960985991:android:e3a96be3a4c21b5f559d22',
+    messagingSenderId: '122960985991',
+    projectId: 'achuar-translator',
+    storageBucket: 'achuar-translator.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyBk6en5pY9kPTk2zQPx2Q16mpuWP5z2o4k',
+    appId: '1:122960985991:ios:e61a311cdf18ba43559d22',
     messagingSenderId: '122960985991',
     projectId: 'achuar-translator',
     storageBucket: 'achuar-translator.firebasestorage.app',
