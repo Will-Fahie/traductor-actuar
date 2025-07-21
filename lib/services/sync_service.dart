@@ -86,8 +86,14 @@ class SyncService {
 
   Future<bool> addSubmission(Map<String, dynamic> submission) async {
     bool isOfflineNow = await isOffline();
-    
     final submissionWithTimestamp = Map<String, dynamic>.from(submission);
+
+    // Add username from SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('username');
+    if (username != null && username.isNotEmpty) {
+      submissionWithTimestamp['user'] = username;
+    }
 
     if (isOfflineNow) {
       submissionWithTimestamp['timestamp'] = 'FieldValue.serverTimestamp()';
