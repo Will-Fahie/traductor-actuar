@@ -38,7 +38,6 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
   late final OnDeviceTranslator _onDeviceTranslator;
   late TabController _tabController;
   
-  bool _isWeb = false;
   bool _modelsDownloaded = false;
   bool _isDownloading = false;
   bool _isTranslating = false;
@@ -57,12 +56,9 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _isWeb = defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        kIsWeb;
+    // No need to set _isWeb, use kIsWeb directly
 
-    if (!_isWeb) {
+    if (!kIsWeb) {
       _onDeviceTranslator = OnDeviceTranslator(
         sourceLanguage: TranslateLanguage.spanish,
         targetLanguage: TranslateLanguage.english,
@@ -72,13 +68,21 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
     
     _initConnectivity();
     _loadUsernameAndTranslations();
+    _achuarTextController.addListener(_onTextChanged);
+    _sourceTextController.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    if (!_isWeb) {
+    if (!kIsWeb) {
       _onDeviceTranslator.close();
     }
+    _achuarTextController.removeListener(_onTextChanged);
+    _sourceTextController.removeListener(_onTextChanged);
     _achuarTextController.dispose();
     _sourceTextController.dispose();
     _translatedTextController.dispose();
@@ -292,21 +296,22 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
       return;
     }
 
-    setState(() {
-      _isTranslating = true;
-      _translatedTextController.text = '';
-    });
+    if (mounted) {
+      setState(() {
+        _isTranslating = true;
+        _translatedTextController.text = '';
+      });
+    }
 
     final sourceText = _sourceTextController.text;
     String translatedText;
 
     try {
-      if (_isWeb || (_isConnected && !_modelsDownloaded)) {
+      print('DEBUG: _translateText called. kIsWeb=$kIsWeb');
+      if (kIsWeb || (!kIsWeb && (_modelsDownloaded || _isConnected))) {
         final translator = GoogleTranslator();
         final translation = await translator.translate(sourceText, from: 'es', to: 'en');
         translatedText = translation.text;
-      } else if (_modelsDownloaded) {
-        translatedText = await _onDeviceTranslator.translateText(sourceText);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Sin conexión. Descargue los modelos o conéctese a internet.')),
@@ -378,7 +383,9 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final canTranslate = !_isWeb && (_modelsDownloaded || _isConnected);
+    final canTranslate = kIsWeb
+      ? _achuarTextController.text.isNotEmpty && _sourceTextController.text.isNotEmpty
+      : (_modelsDownloaded || _isConnected);
 
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
@@ -442,7 +449,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: (_isTranslating || _isSubmitting || !canTranslate) ? null : _translateText,
+                          onPressed: canTranslate ? _translateText : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF82B366),
                             foregroundColor: Colors.white,
@@ -484,7 +491,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
                         color: const Color(0xFF82B366),
                         isDarkMode: isDarkMode,
                       ),
-                      if (!_isWeb && !_modelsDownloaded) ...[
+                      if (!kIsWeb && !_modelsDownloaded) ...[
                         const SizedBox(height: 24),
                         Container(
                           padding: const EdgeInsets.all(20),

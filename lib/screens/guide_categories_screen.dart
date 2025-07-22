@@ -15,6 +15,25 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
   late AnimationController _animationController;
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
+  
+  final List<CategoryData> _categories = [
+    CategoryData(
+      title: 'Aves',
+      subtitle: 'Descubre las especies de aves',
+      icon: Icons.flutter_dash,
+      route: '/birds',
+      color: const Color(0xFF88B0D3),
+      gradientEnd: const Color(0xFF68A0D3),
+    ),
+    CategoryData(
+      title: 'Mamíferos',
+      subtitle: 'Explora los mamíferos nativos',
+      icon: Icons.pets,
+      route: '/mammals',
+      color: const Color(0xFF82B366),
+      gradientEnd: const Color(0xFF62A346),
+    ),
+  ];
 
   @override
   void initState() {
@@ -37,243 +56,191 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F7FA),
-      body: CustomScrollView(
-        slivers: [
-          // (Top part removed as requested)
-          SliverToBoxAdapter(
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Back button to home
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new),
-                          tooltip: 'Volver al inicio',
-                          onPressed: () {
-                            Navigator.of(context).pushReplacementNamed('/home');
-                          },
-                        ),
-                      ],
-                    ),
-                    SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(-1, 0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: _animationController,
-                        curve: Curves.easeOutCubic,
-                      )),
-                      child: Text(
-                        'Categorías',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        title: const Text(
+          'Recursos de Guía',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        elevation: 0,
+        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.only(top: 20),
+          children: [
+            // Header Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(-1, 0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: _animationController,
+                      curve: Curves.easeOutCubic,
+                    )),
+                    child: Text(
+                      'Categorías',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(-1, 0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: _animationController,
-                        curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-                      )),
-                      child: Text(
-                        'Explora la vida silvestre de Ecuador',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(-1, 0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: _animationController,
+                      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+                    )),
+                    child: Text(
+                      'Explora la vida silvestre de Ecuador',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 1),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: _animationController,
-                        curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic),
-                      )),
-                      child: _buildCategoryCard(
-                        context,
-                        'Aves',
-                        Icons.flutter_dash,
-                        const Color(0xFF88B0D3),
-                        'Descubre las especies de aves',
-                        () => Navigator.pushNamed(context, '/birds'),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 1),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: _animationController,
-                        curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
-                      )),
-                      child: _buildCategoryCard(
-                        context,
-                        'Mamíferos',
-                        Icons.pets,
-                        const Color(0xFF82B366),
-                        'Explora los mamíferos nativos',
-                        () => Navigator.pushNamed(context, '/mammals'),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    // Download Section
-                    FadeTransition(
-                      opacity: Tween<double>(
-                        begin: 0.0,
-                        end: 1.0,
-                      ).animate(CurvedAnimation(
-                        parent: _animationController,
-                        curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
-                      )),
-                      child: _buildDownloadSection(context),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
-          ),
-        ],
+            
+            // Category Cards
+            ..._categories.asMap().entries.map((entry) {
+              final index = entry.key;
+              final category = entry.value;
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: _animationController,
+                  curve: Interval(
+                    0.3 + (index * 0.1), 
+                    1.0, 
+                    curve: Curves.easeOutCubic
+                  ),
+                )),
+                child: _buildCategoryCard(
+                  context,
+                  category,
+                  isDarkMode,
+                ),
+              );
+            }).toList(),
+            
+            const SizedBox(height: 32),
+            
+            // Download Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: FadeTransition(
+                opacity: Tween<double>(
+                  begin: 0.0,
+                  end: 1.0,
+                ).animate(CurvedAnimation(
+                  parent: _animationController,
+                  curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
+                )),
+                child: _buildDownloadSection(context, isDarkMode),
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildCategoryCard(
     BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-    String subtitle,
-    VoidCallback onTap,
+    CategoryData category,
+    bool isDarkMode,
   ) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return Hero(
-      tag: 'category_$title',
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Material(
-        color: Colors.transparent,
+        elevation: isDarkMode ? 2 : 4,
+        shadowColor: Colors.black.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          onTap: () => Navigator.pushNamed(context, category.route),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  color.withOpacity(isDarkMode ? 0.3 : 0.1),
-                  color.withOpacity(isDarkMode ? 0.2 : 0.05),
-                ],
-              ),
-              border: Border.all(
-                color: color.withOpacity(0.3),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Stack(
-                children: [
-                  // Background pattern
-                  Positioned(
-                    right: -20,
-                    bottom: -20,
-                    child: Icon(
-                      icon,
-                      size: 120,
-                      color: color.withOpacity(0.1),
-                    ),
-                  ),
-                  // Content
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: color.withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            icon,
-                            size: 32,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDarkMode ? Colors.white : Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                subtitle,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: color.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.arrow_forward_rounded,
-                            color: color,
-                            size: 20,
-                          ),
-                        ),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            child: Row(
+              children: [
+                // Icon container with gradient
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        category.color.withOpacity(0.8),
+                        category.gradientEnd,
                       ],
                     ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: category.color.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                  child: Icon(
+                    category.icon,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                // Title and subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        category.title,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        category.subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Arrow icon
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                  size: 18,
+                ),
+              ],
             ),
           ),
         ),
@@ -281,19 +248,17 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
     );
   }
 
-  Widget _buildDownloadSection(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+  Widget _buildDownloadSection(BuildContext context, bool isDarkMode) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -306,12 +271,12 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.cloud_download_rounded,
-                  color: Colors.blue,
+                  color: Colors.orange[700],
                   size: 24,
                 ),
               ),
@@ -348,7 +313,7 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
                 value: _downloadProgress,
                 minHeight: 8,
                 backgroundColor: Colors.grey.withOpacity(0.2),
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.orange[700]!),
               ),
             ),
             const SizedBox(height: 12),
@@ -364,10 +329,16 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () => _downloadResources(context),
-                icon: const Icon(Icons.download_rounded),
-                label: const Text('Descargar todos los recursos'),
+                icon: const Icon(Icons.download_rounded, size: 20),
+                label: const Text(
+                  'Descargar todos los recursos',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: Colors.orange[700],
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -461,4 +432,23 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
       }
     }
   }
+}
+
+// Data class for categories
+class CategoryData {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final String route;
+  final Color color;
+  final Color gradientEnd;
+
+  const CategoryData({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.route,
+    required this.color,
+    required this.gradientEnd,
+  });
 }

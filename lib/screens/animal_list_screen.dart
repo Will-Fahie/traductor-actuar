@@ -85,65 +85,92 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
     return DefaultTabController(
       length: sortedKeys.isEmpty ? 1 : sortedKeys.length,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () {
-                showSearch(
-                  context: context,
-                  delegate: AnimalSearchDelegate(allAnimals: animals, collectionName: widget.collectionName)
-                );
-              },
-            ),
-          ],
-          bottom: sortedKeys.isEmpty ? null : TabBar(
-            isScrollable: true,
-            tabs: sortedKeys.map((letter) => Tab(text: letter)).toList(),
-            labelColor: AppTheme.primaryColor,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: AppTheme.primaryColor,
-          ),
-        ),
-        body: Column(
-          children: [
-            if (isOffline)
-              _buildStatusBanner(context, 'Datos sin conexión', Icons.download_done, Colors.green),
-            if (isFromCache && !isOffline)
-               _buildStatusBanner(context, 'Modo sin conexión', Icons.wifi_off, Theme.of(context).colorScheme.error),
-            if (sortedKeys.isEmpty)
-              Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      isOffline ? "No se encontraron datos sin conexión." : "Conéctate a internet para descargar la lista.",
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 18, color: Colors.grey),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF121212) : const Color(0xFFF5F7FA),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new),
+                      tooltip: 'Volver',
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () {
+                        showSearch(
+                          context: context,
+                          delegate: AnimalSearchDelegate(allAnimals: animals, collectionName: widget.collectionName)
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              if (isOffline)
+                _buildStatusBanner(context, 'Datos sin conexión', Icons.download_done, Colors.green),
+              if (isFromCache && !isOffline)
+                _buildStatusBanner(context, 'Modo sin conexión', Icons.wifi_off, Theme.of(context).colorScheme.error),
+              if (sortedKeys.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        isOffline ? "No se encontraron datos sin conexión." : "Conéctate a internet para descargar la lista.",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: DefaultTabController(
+                    length: sortedKeys.length,
+                    child: Column(
+                      children: [
+                        TabBar(
+                          isScrollable: true,
+                          tabs: sortedKeys.map((letter) => Tab(text: letter)).toList(),
+                          labelColor: Theme.of(context).primaryColor,
+                          unselectedLabelColor: Colors.grey,
+                          indicatorColor: Theme.of(context).primaryColor,
+                        ),
+                        Expanded(
+                          child: TabBarView(
+                            children: sortedKeys.map((letter) {
+                              final letterAnimals = groupedAnimals[letter]!;
+                              return ListView.builder(
+                                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 20.0),
+                                itemCount: letterAnimals.length,
+                                itemBuilder: (context, index) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                    child: AnimalCard(animalData: letterAnimals[index], collectionName: widget.collectionName, docId: letterAnimals[index]['id'] ?? ''),
+                                  );
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              )
-            else
-              Expanded(
-                child: TabBarView(
-                  children: sortedKeys.map((letter) {
-                    final letterAnimals = groupedAnimals[letter]!;
-                    return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-                      itemCount: letterAnimals.length,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: AnimalCard(animalData: letterAnimals[index], collectionName: widget.collectionName, docId: letterAnimals[index]['id'] ?? ''),
-                        );
-                      },
-                    );
-                  }).toList(),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -271,41 +298,87 @@ class AnimalCard extends StatelessWidget {
     final spanishName = animalData['spanishName'] ?? 'N/A';
     final imageName = animalData['imageName'] as String?;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.primaryColor.withOpacity(0.1), AppTheme.accentColor.withOpacity(0.1)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final badgeColor = collectionName.contains('bird')
+        ? const Color(0xFF88B0D3)
+        : collectionName.contains('mammal')
+            ? const Color(0xFF82B366)
+            : Theme.of(context).primaryColor.withOpacity(0.8);
+    return Material(
+      elevation: isDarkMode ? 2 : 4,
+      borderRadius: BorderRadius.circular(16),
+      color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      shadowColor: Colors.black.withOpacity(0.08),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Card(
-        color: Colors.transparent,
-        elevation: 0,
+        onTap: (imageName != null && imageName.isNotEmpty)
+            ? () => _showImageDialog(context, imageName)
+            : null,
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(mainName, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 12),
-              _buildLanguageRow(context, 'Achuar', mainName),
-              _buildLanguageRow(context, 'Inglés', englishName),
-              _buildLanguageRow(context, 'Español', spanishName),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              // Animal details (no icon)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      mainName,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Inglés: $englishName',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      'Español: $spanishName',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Action buttons with labels
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                    TextButton(
-                      child: const Text('Ver Imagen'),
-                      onPressed: (imageName != null && imageName.isNotEmpty) ? () => _showImageDialog(context, imageName) : null,
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      child: const Text('Editar'),
-                      onPressed: () => _showEditDialog(context, docId, animalData),
-                    ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.image, color: Colors.blueGrey),
+                        tooltip: 'Ver imagen',
+                        onPressed: (imageName != null && imageName.isNotEmpty)
+                            ? () => _showImageDialog(context, imageName)
+                            : null,
+                      ),
+                      const SizedBox(width: 2),
+                      Text('Ver imagen', style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey[300] : Colors.grey[700])),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.orange),
+                        tooltip: 'Editar',
+                        onPressed: () => _showEditDialog(context, docId, animalData),
+                      ),
+                      const SizedBox(width: 2),
+                      Text('Editar', style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey[300] : Colors.grey[700])),
+                    ],
+                  ),
                 ],
               ),
             ],

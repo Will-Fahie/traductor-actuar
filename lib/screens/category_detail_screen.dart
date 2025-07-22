@@ -45,8 +45,10 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         QuestionType.audioToAchuar,
       ];
       if (isMultiWord) {
+        // For multi-word entries, randomly pick from all types (including sentenceOrder)
         allowedTypes.add(QuestionType.sentenceOrder);
       }
+      // For single-word entries, sentenceOrder is not included
       final questionType = allowedTypes[random.nextInt(allowedTypes.length)];
       if (questionType == QuestionType.sentenceOrder) {
         return LearningQuestion(

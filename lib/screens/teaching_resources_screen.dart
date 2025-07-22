@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 class TeachingResourcesScreen extends StatefulWidget {
   const TeachingResourcesScreen({super.key});
@@ -164,8 +165,8 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                 children: [
                   // (Top section removed as requested)
                   
-                  // Download button
-                  if (_isOnline && !_allLessonsDownloaded) ...[
+                  // Download button (only show on mobile, not web)
+                  if (!kIsWeb && _isOnline && !_allLessonsDownloaded) ...[
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Material(
