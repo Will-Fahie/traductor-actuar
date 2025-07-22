@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/models/vocabulary_item.dart';
 import 'package:myapp/services/lesson_service.dart';
-import 'package:myapp/screens/category_detail_screen.dart';
+import 'package:myapp/screens/lesson_screen.dart';
 
 class LevelScreen extends StatelessWidget {
   final Level level;

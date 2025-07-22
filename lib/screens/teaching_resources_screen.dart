@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/services/lesson_service.dart';
 import 'package:myapp/models/vocabulary_item.dart';
-import 'package:myapp/screens/level_screen.dart';
+import 'package:myapp/screens/lesson_choice_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:convert';

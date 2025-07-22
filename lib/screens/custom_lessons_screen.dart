@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/screens/category_detail_screen.dart';
+import 'package:myapp/screens/lesson_screen.dart';
 import 'package:myapp/models/vocabulary_item.dart';
 import 'package:myapp/models/learning_question.dart';
 import 'package:myapp/services/lesson_service.dart';

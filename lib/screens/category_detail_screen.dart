@@ -81,7 +81,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => LearningModeScreen(questions: _learningSession!),
+        builder: (context) => CategoryDetailScreen(lesson: widget.lesson),
       ),
     );
   }
@@ -90,7 +90,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
      Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => LearningModeScreen(questions: _learningSession!),
+        builder: (context) => CategoryDetailScreen(lesson: widget.lesson),
       ),
     );
   }
