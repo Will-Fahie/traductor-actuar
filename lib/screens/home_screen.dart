@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -18,21 +19,47 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.only(top: 40), // Increased top padding
+          padding: const EdgeInsets.only(top: 40),
           children: [
-            // Welcome message
+            // Welcome message with logout button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Winiajai!',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Winiajai!',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          minimumSize: const Size(0, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.logout, size: 15),
+                        label: const Text('Cerrar sesión'),
+                        onPressed: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.remove('username');
+                          Navigator.of(context).pushNamedAndRemoveUntil('/loading', (route) => false);
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -51,7 +78,6 @@ class HomeScreen extends StatelessWidget {
             _buildMenuItem(
               context,
               title: 'Diccionario',
-              subtitle: 'Busca palabras y sus significados',
               icon: Icons.book,
               routeName: '/dictionary',
               color: const Color(0xFF6B5B95),
@@ -59,7 +85,6 @@ class HomeScreen extends StatelessWidget {
             _buildMenuItem(
               context,
               title: 'Envío de Frases',
-              subtitle: 'Comparte nuevas frases para traducir',
               icon: Icons.send,
               routeName: '/submit',
               color: const Color(0xFF88B0D3),
@@ -67,7 +92,6 @@ class HomeScreen extends StatelessWidget {
             _buildMenuItem(
               context,
               title: 'Traductor',
-              subtitle: 'Traduce texto instantáneamente',
               icon: Icons.translate,
               routeName: '/translator',
               color: const Color(0xFF82B366),
@@ -75,7 +99,6 @@ class HomeScreen extends StatelessWidget {
             _buildMenuItem(
               context,
               title: 'Recursos de Enseñanza',
-              subtitle: 'Material educativo y lecciones',
               icon: Icons.school,
               routeName: '/teaching_resources',
               color: const Color(0xFFFA6900),
@@ -83,7 +106,6 @@ class HomeScreen extends StatelessWidget {
             _buildMenuItem(
               context,
               title: 'Recursos de Guía',
-              subtitle: 'Guías y documentación útil',
               icon: Icons.map,
               routeName: '/guide_resources',
               color: const Color(0xFFF38630),
@@ -91,7 +113,6 @@ class HomeScreen extends StatelessWidget {
             _buildMenuItem(
               context,
               title: 'Recursos de Ecolodge',
-              subtitle: 'Información sobre ecoturismo',
               icon: Icons.eco,
               routeName: '/ecolodge_resources',
               color: const Color(0xFF69D2E7),
@@ -106,7 +127,6 @@ class HomeScreen extends StatelessWidget {
   Widget _buildMenuItem(
     BuildContext context, {
     required String title,
-    required String subtitle,
     required IconData icon,
     required String routeName,
     required Color color,
@@ -124,7 +144,7 @@ class HomeScreen extends StatelessWidget {
           onTap: () => Navigator.pushNamed(context, routeName),
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
             child: Row(
               children: [
                 // Icon container with gradient background
@@ -156,28 +176,15 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 20),
-                // Title and subtitle
+                // Title only
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
                   ),
                 ),
                 // Arrow icon

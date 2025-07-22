@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:myapp/services/sync_service.dart';
 import 'package:myapp/firebase_options.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:myapp/screens/welcome_screen.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -26,8 +28,17 @@ class _LoadingScreenState extends State<LoadingScreen> {
     // Initialize SyncService and wait for it to complete
     await SyncService().initialize();
 
-    // Navigate to the home screen
-    Navigator.of(context).pushReplacementNamed('/');
+    // Check for username and navigate accordingly
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('username');
+    if (username == null || username.isEmpty) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+        (route) => false,
+      );
+    } else {
+      Navigator.of(context).pushReplacementNamed('/home');
+    }
   }
 
   @override

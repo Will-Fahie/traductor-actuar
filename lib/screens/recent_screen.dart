@@ -22,7 +22,6 @@ class _RecentScreenState extends State<RecentScreen>
   List<ConnectivityResult> _connectionStatus = [ConnectivityResult.none];
 
   bool _isEditMode = false;
-  String _userName = '';
   final String _editPassword = 'chicha';
 
   String? _deviceId;
@@ -150,7 +149,6 @@ class _RecentScreenState extends State<RecentScreen>
   }
 
   void _showDeleteDialog(BuildContext context, DocumentSnapshot doc) {
-    final passwordController = TextEditingController();
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     showDialog(
@@ -170,7 +168,7 @@ class _RecentScreenState extends State<RecentScreen>
               ),
               const SizedBox(width: 12),
               Text(
-                'Confirmar Eliminación',
+                'Eliminar entrada',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.black87,
@@ -178,31 +176,11 @@ class _RecentScreenState extends State<RecentScreen>
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '¿Estás seguro de que deseas eliminar esta contribución?',
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-                ),
-              ),
-              if (_isEditMode) ...[
-                const SizedBox(height: 16),
-                TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Contraseña',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            ],
+          content: Text(
+            '¿Estás seguro de que deseas eliminar esta entrada? Esta acción no se puede deshacer.',
+            style: TextStyle(
+              color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+            ),
           ),
           actions: [
             TextButton(
@@ -216,20 +194,15 @@ class _RecentScreenState extends State<RecentScreen>
             ),
             ElevatedButton(
               onPressed: () async {
-                if (!_isEditMode || passwordController.text == _editPassword) {
-                  if (_connectionStatus.contains(ConnectivityResult.none)) {
-                    _pendingDeletes.add(doc.id);
-                    await _savePendingDeletes();
-                  } else {
-                    FirebaseFirestore.instance
-                        .collection('achuar_submission')
-                        .doc(doc.id)
-                        .delete();
-                  }
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('achuar_submission')
+                      .doc(doc.id)
+                      .delete();
                   Navigator.pop(context);
-                } else {
+                } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Contraseña incorrecta')),
+                    SnackBar(content: Text('Error al eliminar la entrada: $e')),
                   );
                 }
               },
@@ -361,8 +334,7 @@ class _RecentScreenState extends State<RecentScreen>
   }
 
   void _showEditModeDialog() {
-    final nameController = TextEditingController();
-    final passwordController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
@@ -394,17 +366,6 @@ class _RecentScreenState extends State<RecentScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Nombre',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
                 controller: passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
@@ -428,11 +389,13 @@ class _RecentScreenState extends State<RecentScreen>
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (passwordController.text == _editPassword) {
+              onPressed: () async {
+                final password = passwordController.text.trim();
+                if (password == _editPassword) {
+                  final prefs = await SharedPreferences.getInstance();
+                  final username = prefs.getString('username') ?? '';
                   setState(() {
                     _isEditMode = true;
-                    _userName = nameController.text;
                   });
                   Navigator.pop(context);
                 } else {
@@ -463,9 +426,11 @@ class _RecentScreenState extends State<RecentScreen>
       _optimisticReviewedStatus[doc.id] = value;
     });
 
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('username') ?? '';
     final reviewData = {
       'reviewed': value,
-      'reviewed_by': _userName,
+      'reviewed_by': username,
     };
 
     if (_connectionStatus.contains(ConnectivityResult.none)) {
@@ -511,33 +476,39 @@ class _RecentScreenState extends State<RecentScreen>
         elevation: 0,
         backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: TextButton.icon(
               onPressed: () {
                 if (_isEditMode) {
                   setState(() {
                     _isEditMode = false;
-                    _userName = '';
                   });
                 } else {
                   _showEditModeDialog();
                 }
               },
               icon: Icon(
-                _isEditMode ? Icons.edit_off_outlined : Icons.edit_outlined,
+                _isEditMode ? Icons.edit_off : Icons.edit,
                 size: 18,
               ),
-              label: const Text('Editar'),
+              label: Text(
+                'Editar',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               style: TextButton.styleFrom(
-                foregroundColor: _isEditMode
-                    ? const Color(0xFF6B5B95)
-                    : (isDarkMode ? Colors.grey[300] : Colors.grey[600]),
+                foregroundColor: _isEditMode 
+                    ? Colors.white
+                    : (isDarkMode ? Colors.grey[300] : Colors.grey[700]),
                 backgroundColor: _isEditMode
-                    ? const Color(0xFF6B5B95).withOpacity(0.1)
-                    : Colors.transparent,
+                    ? const Color(0xFF6B5B95)
+                    : (isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[200]),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
+                  borderRadius: BorderRadius.circular(20),
                 ),
               ),
             ),
@@ -663,6 +634,28 @@ class SubmissionsTabView extends StatefulWidget {
 }
 
 class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticKeepAliveClientMixin {
+  String? _username;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _username = prefs.getString('username');
+    });
+  }
+
   @override
   bool get wantKeepAlive => true;
 
@@ -672,12 +665,22 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
+    if (_username == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
     return StreamBuilder<QuerySnapshot>(
       key: ValueKey<String>(widget.isLocal ? 'local_${widget.deviceId}' : 'all'),
-      stream: FirebaseFirestore.instance
-          .collection('achuar_submission')
-          .orderBy('timestamp', descending: true)
-          .snapshots(),
+      stream: widget.isLocal
+          ? FirebaseFirestore.instance
+              .collection('achuar_submission')
+              .where('user', isEqualTo: _username)
+              .orderBy('timestamp', descending: true)
+              .snapshots()
+          : FirebaseFirestore.instance
+              .collection('achuar_submission')
+              .orderBy('timestamp', descending: true)
+              .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(
@@ -726,7 +729,7 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
         if (widget.isLocal) {
           docs = docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            return data['deviceId'] == widget.deviceId;
+            return data['user'] == _username;
           }).toList();
         }
 
@@ -795,6 +798,8 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
         }
 
         return ListView.builder(
+          key: PageStorageKey<String>(widget.isLocal ? 'local_list_${widget.deviceId}' : 'all_list'),
+          controller: _scrollController,
           padding: const EdgeInsets.only(top: 8, bottom: 20),
           itemCount: docs.length,
           itemBuilder: (context, index) {
@@ -809,7 +814,6 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
   Widget _buildListItem(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final bool isReviewed = widget.optimisticReviewedStatus[doc.id] ?? data['reviewed'] == true;
-    final bool isOwner = data['deviceId'] == widget.deviceId;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -821,7 +825,9 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
         shadowColor: Colors.black.withOpacity(0.1),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () {},
+          onTap: () {
+            // Could show details or expand
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -854,6 +860,38 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
                                   ),
                                 ),
                               ),
+                              if (widget.isEditMode && isReviewed) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.check_circle,
+                                        size: 12,
+                                        color: Colors.green[700],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Revisado',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.green[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -895,21 +933,20 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
                         ],
                       ),
                     ),
-                    if (widget.isEditMode || isOwner) ...[
+                    if (widget.isEditMode || (data['user'] != null && data['user'] == _username)) ...[
                       const SizedBox(width: 8),
                       Column(
                         children: [
-                          if (widget.isEditMode)
+                          if (widget.isEditMode) ...[
                             Checkbox(
                               value: isReviewed,
                               activeColor: const Color(0xFF82B366),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  widget.onReviewChanged(doc, value);
-                                }
+                              onChanged: (value) async {
+                                await widget.onReviewChanged(doc, value ?? false);
                               },
                             ),
-                          const SizedBox(height: 8),
+                            const SizedBox(height: 8),
+                          ],
                           Row(
                             children: [
                               Container(
@@ -954,7 +991,7 @@ class _SubmissionsTabViewState extends State<SubmissionsTabView> with AutomaticK
                     ],
                   ],
                 ),
-                if (data['location'] != null) ...[
+                if (data['location'] != null && data['location'].toString().isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Row(
                     children: [

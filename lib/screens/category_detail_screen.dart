@@ -37,9 +37,27 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     final shuffledData = List<VocabularyItem>.from(widget.lesson.entries)..shuffle();
 
     final session = shuffledData.map((entry) {
-      final questionType = QuestionType.values[random.nextInt(QuestionType.values.length)];
+      final isMultiWord = entry.english.trim().split(' ').length > 1;
+      List<QuestionType> allowedTypes = [
+        QuestionType.achuarToEnglish,
+        QuestionType.englishToAchuar,
+        QuestionType.typeEnglish,
+        QuestionType.audioToAchuar,
+      ];
+      if (isMultiWord) {
+        // For multi-word entries, randomly pick from all types (including sentenceOrder)
+        allowedTypes.add(QuestionType.sentenceOrder);
+      }
+      // For single-word entries, sentenceOrder is not included
+      final questionType = allowedTypes[random.nextInt(allowedTypes.length)];
+      if (questionType == QuestionType.sentenceOrder) {
+        return LearningQuestion(
+          correctEntry: entry,
+          type: QuestionType.sentenceOrder,
+          options: [],
+        );
+      }
       List<VocabularyItem> options = [];
-
       if (questionType == QuestionType.achuarToEnglish || questionType == QuestionType.englishToAchuar || questionType == QuestionType.audioToAchuar) {
         options.add(entry);
         final otherOptions = List<VocabularyItem>.from(widget.lesson.entries)..remove(entry);
@@ -47,7 +65,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         options.addAll(otherOptions.take(2));
         options.shuffle();
       }
-
       return LearningQuestion(
         correctEntry: entry,
         type: questionType,

@@ -5,6 +5,7 @@ enum QuestionType {
   englishToAchuar,
   typeEnglish,
   audioToAchuar,
+  sentenceOrder, // new type for Duolingo-style
 }
 
 class LearningQuestion {

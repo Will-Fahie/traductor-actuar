@@ -70,6 +70,8 @@ class _LearningModeScreenState extends State<LearningModeScreen> {
         return _buildTextInput(question.correctEntry.achuar, question.correctEntry.english);
       case QuestionType.audioToAchuar:
         return _buildAudioMultipleChoice(question);
+      case QuestionType.sentenceOrder:
+        return _buildSentenceOrder(question);
       default:
         return const Text('Error: Tipo de pregunta no válido');
     }
@@ -227,6 +229,98 @@ class _LearningModeScreenState extends State<LearningModeScreen> {
             )
         ]
       ],
+    );
+  }
+
+  // Duolingo-style sentence ordering question
+  Widget _buildSentenceOrder(LearningQuestion question) {
+    final correctWords = question.correctEntry.english.split(' ');
+    final prompt = question.correctEntry.achuar;
+    // State for this question
+    List<String> selectedWords = [];
+    List<String> availableWords = List<String>.from(correctWords);
+    bool isCorrect = false;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        isCorrect = _answered && selectedWords.join(' ') == correctWords.join(' ');
+        // Auto-complete if correct order is entered
+        if (!_answered && selectedWords.length == correctWords.length && selectedWords.join(' ') == correctWords.join(' ')) {
+          Future.microtask(() => setState(() { _answered = true; }));
+        }
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(prompt, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blueGrey.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Toca las palabras en inglés en el orden correcto para formar la frase. Si te equivocas, toca una palabra en la frase para devolverla arriba.',
+                style: TextStyle(fontSize: 14, color: Colors.black54),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: availableWords.where((w) => !selectedWords.contains(w)).map((word) => ElevatedButton(
+                onPressed: _answered ? null : () {
+                  setState(() { selectedWords.add(word); });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[200],
+                  foregroundColor: Colors.black87,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: Text(word, style: const TextStyle(fontSize: 16)),
+              )).toList(),
+            ),
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: selectedWords.map((word) => OutlinedButton(
+                onPressed: _answered ? null : () {
+                  setState(() { selectedWords.remove(word); });
+                },
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.blueGrey),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: Text(word, style: const TextStyle(fontSize: 16)),
+              )).toList(),
+            ),
+            const SizedBox(height: 24),
+            if (!_answered) ...[
+              TextButton(
+                onPressed: _nextQuestion,
+                child: const Text('Saltar', style: TextStyle(fontSize: 16)),
+              ),
+            ],
+            const SizedBox(height: 30),
+            if (_answered) ...[
+              Text(isCorrect ? "¡Correcto!" : "¡Incorrecto!", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isCorrect ? Colors.green : Colors.red,)),
+              if (!isCorrect) Text("La respuesta correcta es: ${correctWords.join(' ')}", style: const TextStyle(fontSize: 18)),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _nextQuestion,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(200, 50),
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: const Text('Siguiente'),
+              )
+            ]
+          ],
+        );
+      },
     );
   }
 

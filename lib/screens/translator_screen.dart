@@ -38,15 +38,17 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
   late final OnDeviceTranslator _onDeviceTranslator;
   late TabController _tabController;
   
-  bool _isWeb = false;
   bool _modelsDownloaded = false;
   bool _isDownloading = false;
   bool _isTranslating = false;
   bool _isSubmitting = false;
   bool _isConnected = false;
 
-  List<Map<String, String>> _recentTranslations = [];
-  List<Map<String, String>> _favoriteTranslations = [];
+  List<Map<String, dynamic>> _recentTranslations = [];
+  List<Map<String, dynamic>> _favoriteTranslations = [];
+  String? _username;
+  bool _loadingTranslations = true;
+  bool _loadingFavorites = true;
   
   final int _maxRecentTranslations = 20;
 
@@ -54,12 +56,9 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _isWeb = defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        kIsWeb;
+    // No need to set _isWeb, use kIsWeb directly
 
-    if (!_isWeb) {
+    if (!kIsWeb) {
       _onDeviceTranslator = OnDeviceTranslator(
         sourceLanguage: TranslateLanguage.spanish,
         targetLanguage: TranslateLanguage.english,
@@ -68,14 +67,22 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
     }
     
     _initConnectivity();
-    _loadTranslations();
+    _loadUsernameAndTranslations();
+    _achuarTextController.addListener(_onTextChanged);
+    _sourceTextController.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    if (!_isWeb) {
+    if (!kIsWeb) {
       _onDeviceTranslator.close();
     }
+    _achuarTextController.removeListener(_onTextChanged);
+    _sourceTextController.removeListener(_onTextChanged);
     _achuarTextController.dispose();
     _sourceTextController.dispose();
     _translatedTextController.dispose();
@@ -97,19 +104,55 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
     }
   }
 
-  Future<void> _loadTranslations() async {
+  Future<void> _loadUsernameAndTranslations() async {
     final prefs = await SharedPreferences.getInstance();
-    final recentJson = prefs.getStringList('recentTranslations') ?? [];
-    final favoritesJson = prefs.getStringList('favoriteTranslations') ?? [];
-    
+    final username = prefs.getString('username');
     setState(() {
-      _recentTranslations = recentJson.map((json) => 
-        Map<String, String>.from(jsonDecode(json))
-      ).toList();
-      
-      _favoriteTranslations = favoritesJson.map((json) => 
-        Map<String, String>.from(jsonDecode(json))
-      ).toList();
+      _username = username;
+    });
+    if (username != null && username.isNotEmpty) {
+      _fetchRecentTranslations(username);
+      _fetchFavoriteTranslations(username);
+    }
+  }
+
+  Future<void> _fetchRecentTranslations(String username) async {
+    setState(() { _loadingTranslations = true; });
+    final query = await FirebaseFirestore.instance
+        .collection('achuar_submission')
+        .where('user', isEqualTo: username)
+        .orderBy('timestamp', descending: true)
+        .limit(_maxRecentTranslations)
+        .get();
+    setState(() {
+      _recentTranslations = query.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['timestamp'] is Timestamp) {
+          data['timestamp'] = (data['timestamp'] as Timestamp).toDate().toIso8601String();
+        }
+        return data;
+      }).toList();
+      _loadingTranslations = false;
+    });
+  }
+
+  Future<void> _fetchFavoriteTranslations(String username) async {
+    setState(() { _loadingFavorites = true; });
+    final query = await FirebaseFirestore.instance
+        .collection('achuar_submission')
+        .where('user', isEqualTo: username)
+        .where('favourite', isEqualTo: true)
+        .orderBy('timestamp', descending: true)
+        .get();
+    setState(() {
+      _favoriteTranslations = query.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['timestamp'] is Timestamp) {
+          data['timestamp'] = (data['timestamp'] as Timestamp).toDate().toIso8601String();
+        }
+        return data;
+      }).toList();
+      _loadingFavorites = false;
     });
   }
 
@@ -148,24 +191,38 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
     await _saveTranslations();
   }
 
-  Future<void> _toggleFavorite(Map<String, String> translation) async {
+  Future<void> _toggleFavorite(Map<String, dynamic> translation) async {
+    if (_username == null) return;
+    final isCurrentlyFavorite = _isFavorite(translation);
+    // Optimistically update UI
     setState(() {
-      final index = _favoriteTranslations.indexWhere((t) => 
-        t['achuar'] == translation['achuar'] && t['english'] == translation['english']
-      );
-      
-      if (index >= 0) {
-        _favoriteTranslations.removeAt(index);
+      if (isCurrentlyFavorite) {
+        _favoriteTranslations.removeWhere((t) =>
+          t['achuar'] == translation['achuar'] && t['english'] == translation['english']
+        );
       } else {
         _favoriteTranslations.add(translation);
       }
     });
-    
-    await _saveTranslations();
+    // Update Firestore in background
+    final query = await FirebaseFirestore.instance
+        .collection('achuar_submission')
+        .where('user', isEqualTo: _username)
+        .where('achuar', isEqualTo: translation['achuar'])
+        .where('english', isEqualTo: translation['english'])
+        .limit(1)
+        .get();
+    if (query.docs.isNotEmpty) {
+      final doc = query.docs.first;
+      final isFav = (doc.data()['favourite'] == true);
+      await doc.reference.update({'favourite': !isFav});
+      // Optionally, re-fetch from Firestore to ensure consistency
+      // await _fetchFavoriteTranslations(_username!);
+    }
   }
 
-  bool _isFavorite(Map<String, String> translation) {
-    return _favoriteTranslations.any((t) => 
+  bool _isFavorite(Map<String, dynamic> translation) {
+    return _favoriteTranslations.any((t) =>
       t['achuar'] == translation['achuar'] && t['english'] == translation['english']
     );
   }
@@ -200,7 +257,20 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
 
     final modelManager = OnDeviceTranslatorModelManager();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Descargando modelos...')),
+      const SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Descargando modelos...'),
+            SizedBox(height: 8),
+            Text('Por favor, no abandone esta página mientras se descargan los modelos.',
+              style: TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+        duration: Duration(minutes: 2),
+      ),
     );
 
     await modelManager.downloadModel(TranslateLanguage.spanish.bcp47Code);
@@ -226,21 +296,22 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
       return;
     }
 
-    setState(() {
-      _isTranslating = true;
-      _translatedTextController.text = '';
-    });
+    if (mounted) {
+      setState(() {
+        _isTranslating = true;
+        _translatedTextController.text = '';
+      });
+    }
 
     final sourceText = _sourceTextController.text;
     String translatedText;
 
     try {
-      if (_isWeb || (_isConnected && !_modelsDownloaded)) {
+      print('DEBUG: _translateText called. kIsWeb=$kIsWeb');
+      if (kIsWeb || (!kIsWeb && (_modelsDownloaded || _isConnected))) {
         final translator = GoogleTranslator();
         final translation = await translator.translate(sourceText, from: 'es', to: 'en');
         translatedText = translation.text;
-      } else if (_modelsDownloaded) {
-        translatedText = await _onDeviceTranslator.translateText(sourceText);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Sin conexión. Descargue los modelos o conéctese a internet.')),
@@ -277,20 +348,22 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
       _isSubmitting = true;
     });
 
+    final deviceId = await SyncService().getDeviceId();
     final submission = {
       'achuar': _achuarTextController.text,
       'spanish': _sourceTextController.text,
+      'english': _translatedTextController.text,
       'source': 'translator',
+      'notes': '',
+      'location': 'Desde Traductor',
+      'deviceId': deviceId,
     };
     
     final wasSavedLocally = await SyncService().addSubmission(submission);
 
-    if (mounted) {
+    if (mounted && wasSavedLocally) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(wasSavedLocally 
-          ? 'Guardado localmente. Se enviará cuando haya conexión.'
-          : 'Traducción enviada con éxito.'
-        )),
+        const SnackBar(content: Text('Guardado localmente. Se enviará cuando haya conexión.')),
       );
     }
 
@@ -310,7 +383,9 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final canTranslate = !_isWeb && (_modelsDownloaded || _isConnected);
+    final canTranslate = kIsWeb
+      ? _achuarTextController.text.isNotEmpty && _sourceTextController.text.isNotEmpty
+      : (_modelsDownloaded || _isConnected);
 
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
@@ -374,7 +449,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: (_isTranslating || _isSubmitting || !canTranslate) ? null : _translateText,
+                          onPressed: canTranslate ? _translateText : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF82B366),
                             foregroundColor: Colors.white,
@@ -416,7 +491,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
                         color: const Color(0xFF82B366),
                         isDarkMode: isDarkMode,
                       ),
-                      if (!_isWeb && !_modelsDownloaded) ...[
+                      if (!kIsWeb && !_modelsDownloaded) ...[
                         const SizedBox(height: 24),
                         Container(
                           padding: const EdgeInsets.all(20),
@@ -566,7 +641,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildTranslationCard(Map<String, String> translation, bool isDarkMode) {
+  Widget _buildTranslationCard(Map<String, dynamic> translation, bool isDarkMode) {
     final isFavorite = _isFavorite(translation);
     
     return Container(
