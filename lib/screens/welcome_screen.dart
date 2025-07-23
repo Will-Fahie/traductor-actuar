@@ -4,9 +4,35 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:myapp/firebase_options.dart';
 import 'dart:math';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
-class WelcomeScreen extends StatelessWidget {
+class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
+
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> {
+  bool _isConnected = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initConnectivity();
+  }
+
+  Future<void> _initConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    setState(() {
+      _isConnected = !connectivityResult.contains(ConnectivityResult.none);
+    });
+    Connectivity().onConnectivityChanged.listen((result) {
+      setState(() {
+        _isConnected = !result.contains(ConnectivityResult.none);
+      });
+    });
+  }
 
   Future<void> _showExistingUserDialog(BuildContext context) async {
     final TextEditingController controller = TextEditingController();
@@ -567,7 +593,7 @@ class WelcomeScreen extends StatelessWidget {
                     const SizedBox(height: 60),
                     // Existing user button
                     _buildWelcomeButton(
-                      onPressed: () => _showExistingUserDialog(context),
+                      onPressed: _isConnected ? () => _showExistingUserDialog(context) : null,
                       icon: Icons.person_outline,
                       label: 'Usuario existente',
                       subtitle: 'Ingresa con tu cuenta',
@@ -576,11 +602,12 @@ class WelcomeScreen extends StatelessWidget {
                         Color(0xFF5A4A83),
                       ],
                       isDarkMode: isDarkMode,
+                      isEnabled: _isConnected,
                     ),
                     const SizedBox(height: 16),
                     // New user button
                     _buildWelcomeButton(
-                      onPressed: () => _showNewUserDialog(context),
+                      onPressed: _isConnected ? () => _showNewUserDialog(context) : null,
                       icon: Icons.person_add_outlined,
                       label: 'Nuevo usuario',
                       subtitle: 'Crea tu cuenta',
@@ -589,6 +616,7 @@ class WelcomeScreen extends StatelessWidget {
                         Color(0xFF6B8CAE),
                       ],
                       isDarkMode: isDarkMode,
+                      isEnabled: _isConnected,
                     ),
                     const SizedBox(height: 16),
                     // Guest button
@@ -602,8 +630,35 @@ class WelcomeScreen extends StatelessWidget {
                         Colors.grey[700]!,
                       ],
                       isDarkMode: isDarkMode,
+                      isEnabled: true,
                     ),
                     const SizedBox(height: 40),
+                    if (!_isConnected) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.wifi_off, color: Colors.red, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Por favor, conéctese a internet para iniciar sesión o crear una cuenta.',
+                                style: TextStyle(
+                                  color: Colors.red[700],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     Text(
                       'Selecciona cómo deseas continuar',
                       style: TextStyle(
@@ -622,25 +677,27 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   Widget _buildWelcomeButton({
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     required IconData icon,
     required String label,
     required String subtitle,
     required List<Color> gradient,
     required bool isDarkMode,
+    bool isEnabled = true,
   }) {
     return Material(
       elevation: 4,
       borderRadius: BorderRadius.circular(16),
       shadowColor: gradient[0].withOpacity(0.3),
       child: InkWell(
-        onTap: onPressed,
+        onTap: isEnabled ? onPressed : null,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
             borderRadius: BorderRadius.circular(16),
+            border: isEnabled ? null : Border.all(color: Colors.grey[400]!, width: 1),
           ),
           child: Row(
             children: [
@@ -654,6 +711,7 @@ class WelcomeScreen extends StatelessWidget {
                     colors: gradient,
                   ),
                   borderRadius: BorderRadius.circular(14),
+                  color: isEnabled ? null : Colors.grey[300],
                 ),
                 child: Icon(
                   icon,
@@ -671,7 +729,7 @@ class WelcomeScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: isDarkMode ? Colors.white : Colors.black87,
+                        color: isEnabled ? (isDarkMode ? Colors.white : Colors.black87) : Colors.grey[400],
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -679,7 +737,7 @@ class WelcomeScreen extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 14,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        color: isEnabled ? (isDarkMode ? Colors.grey[400] : Colors.grey[600]) : Colors.grey[400],
                       ),
                     ),
                   ],
@@ -687,7 +745,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               Icon(
                 Icons.arrow_forward_ios,
-                color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                color: isEnabled ? (isDarkMode ? Colors.grey[600] : Colors.grey[400]) : Colors.grey[400],
                 size: 18,
               ),
             ],

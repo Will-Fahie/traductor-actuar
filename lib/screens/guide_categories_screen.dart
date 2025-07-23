@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:myapp/services/tts_service.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:async';
 
 class GuideCategoriesScreen extends StatefulWidget {
   const GuideCategoriesScreen({super.key});
@@ -15,6 +22,9 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
   late AnimationController _animationController;
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
+  bool _isDownloaded = false;
+  bool _isConnected = true;
+  StreamSubscription<dynamic>? _connectivitySubscription;
   
   final List<CategoryData> _categories = [
     CategoryData(
@@ -43,11 +53,57 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
       vsync: this,
     );
     _animationController.forward();
+    _restoreDownloadState();
+    _initConnectivity();
+  }
+
+  Future<void> _initConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    setState(() {
+      _isConnected = !connectivityResult.contains(ConnectivityResult.none);
+    });
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
+      if (mounted) {
+        setState(() {
+          _isConnected = !result.contains(ConnectivityResult.none);
+        });
+      }
+    });
+  }
+
+  Future<void> _restoreDownloadState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final downloaded = prefs.getBool('resources_downloaded') ?? false;
+    final isDownloading = prefs.getBool('resources_downloading') ?? false;
+    final downloadProgress = prefs.getDouble('resources_download_progress') ?? 0.0;
+    if (isDownloading) {
+      if (mounted) {
+        setState(() {
+          _isDownloading = true;
+          _downloadProgress = downloadProgress;
+          _isDownloaded = downloaded;
+        });
+        // Automatically resume the download
+        // Use a post-frame callback to avoid setState during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _downloadResources(context);
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _isDownloaded = downloaded;
+          _isDownloading = false;
+          _downloadProgress = 0.0;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _connectivitySubscription?.cancel();
     super.dispose();
   }
 
@@ -69,72 +125,15 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
         child: ListView(
           padding: const EdgeInsets.only(top: 20),
           children: [
-            // Header Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(-1, 0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: _animationController,
-                      curve: Curves.easeOutCubic,
-                    )),
-                    child: Text(
-                      'Categorías',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(-1, 0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: _animationController,
-                      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-                    )),
-                    child: Text(
-                      'Explora la vida silvestre de Ecuador',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
             
             // Category Cards
             ..._categories.asMap().entries.map((entry) {
               final index = entry.key;
               final category = entry.value;
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 1),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: _animationController,
-                  curve: Interval(
-                    0.3 + (index * 0.1), 
-                    1.0, 
-                    curve: Curves.easeOutCubic
-                  ),
-                )),
-                child: _buildCategoryCard(
-                  context,
-                  category,
-                  isDarkMode,
-                ),
+              return _buildCategoryCard(
+                context,
+                category,
+                isDarkMode,
               );
             }).toList(),
             
@@ -143,16 +142,7 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
             // Download Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: FadeTransition(
-                opacity: Tween<double>(
-                  begin: 0.0,
-                  end: 1.0,
-                ).animate(CurvedAnimation(
-                  parent: _animationController,
-                  curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
-                )),
-                child: _buildDownloadSection(context, isDarkMode),
-              ),
+              child: _buildDownloadSection(context, isDarkMode),
             ),
             
             const SizedBox(height: 20),
@@ -249,6 +239,13 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
   }
 
   Widget _buildDownloadSection(BuildContext context, bool isDarkMode) {
+    // Hardcode image size to 130MB, text data to 0.5MB
+    final double estimatedTextMB = 0.5;
+    final double estimatedImageMB = 130.0;
+    final double estimatedMB = estimatedTextMB + estimatedImageMB;
+    final String sizeEstimate = estimatedMB.toStringAsFixed(1);
+    final isOffline = !_isConnected;
+    if (kIsWeb) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -294,7 +291,7 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
                       ),
                     ),
                     Text(
-                      'Descarga los recursos para usar offline',
+                      'Descargue el texto y las imágenes para uso sin conexión',
                       style: TextStyle(
                         fontSize: 14,
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -324,15 +321,39 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
               ),
             ),
-          ] else
+          ] else if (_isDownloaded) ...[
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _downloadResources(context),
-                icon: const Icon(Icons.download_rounded, size: 20),
+                onPressed: null,
+                icon: const Icon(Icons.check_circle, size: 20),
                 label: const Text(
-                  'Descargar todos los recursos',
+                  'Descargado',
                   style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isOffline || _isDownloading ? null : () => _downloadResources(context),
+                icon: Icon(Icons.download_rounded, size: 20, color: isOffline ? Colors.grey : Colors.blue),
+                label: Text(
+                  '130 MB',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -348,37 +369,85 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
                 ),
               ),
             ),
+          ],
         ],
       ),
     );
   }
 
   Future<void> _downloadResources(BuildContext context) async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Por favor, no abandone esta página mientras se descarga.'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
       _isDownloading = true;
       _downloadProgress = 0.0;
     });
+    await prefs.setBool('resources_downloading', true);
+    await prefs.setDouble('resources_download_progress', 0.0);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
       final firestore = FirebaseFirestore.instance;
+      final storage = FirebaseStorage.instance;
 
       // Simulate progress for better UX
-      setState(() => _downloadProgress = 0.3);
+      setState(() => _downloadProgress = 0.1);
+      await prefs.setDouble('resources_download_progress', 0.1);
+      if (!mounted) return;
 
       // Download birds
       final birdsSnapshot = await firestore.collection('animals_birds').get();
+      if (!mounted) return;
       final birdsData = birdsSnapshot.docs.map((doc) => doc.data()).toList();
       await prefs.setString('offline_birds', jsonEncode(birdsData));
-
-      setState(() => _downloadProgress = 0.7);
+      setState(() => _downloadProgress = 0.3);
+      await prefs.setDouble('resources_download_progress', 0.3);
+      if (!mounted) return;
 
       // Download mammals
       final mammalsSnapshot = await firestore.collection('animals_mammals').get();
+      if (!mounted) return;
       final mammalsData = mammalsSnapshot.docs.map((doc) => doc.data()).toList();
       await prefs.setString('offline_mammals', jsonEncode(mammalsData));
+      setState(() => _downloadProgress = 0.3);
+      await prefs.setDouble('resources_download_progress', 0.3);
+      if (!mounted) return;
 
-      setState(() => _downloadProgress = 1.0);
+      // Download all images for birds and mammals
+      final allAnimals = [...birdsData, ...mammalsData];
+      final imageNames = allAnimals.map((a) => a['imageName']).where((name) => name != null && name.toString().isNotEmpty).toSet();
+      final appDocDir = !kIsWeb ? await getApplicationDocumentsDirectory() : null;
+      final imagesDir = appDocDir != null ? Directory('${appDocDir.path}/animal_images') : null;
+      if (imagesDir != null && !imagesDir.existsSync()) {
+        imagesDir.createSync(recursive: true);
+      }
+      int completed = 0;
+      for (final imageName in imageNames) {
+        final localPath = imagesDir != null ? '${imagesDir.path}/$imageName' : null;
+        if (localPath == null) continue; // Skip if appDocDir is null
+        final file = File(localPath);
+        if (!file.existsSync()) {
+          try {
+            final ref = storage.ref().child('achuar_animals/$imageName');
+            final data = await ref.getData();
+            if (data != null) {
+              await file.writeAsBytes(data);
+            }
+          } catch (e) {
+            // Ignore individual image download errors
+          }
+        }
+        completed++;
+        final progress = 0.3 + 0.7 * (completed / imageNames.length);
+        setState(() => _downloadProgress = progress);
+        await prefs.setDouble('resources_download_progress', progress);
+        if (!mounted) return;
+      }
 
       // Show success message
       if (mounted) {
@@ -388,7 +457,7 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Text('Recursos descargados con éxito!'),
+                Text('Recursos e imágenes descargados con éxito!'),
               ],
             ),
             backgroundColor: Colors.green,
@@ -400,17 +469,27 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
         );
       }
 
+      // Persist download state
+      await prefs.setBool('resources_downloaded', true);
+      await prefs.setBool('resources_downloading', false);
+      await prefs.setDouble('resources_download_progress', 0.0);
+
       // Reset after a delay
       await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
       setState(() {
         _isDownloading = false;
         _downloadProgress = 0.0;
+        _isDownloaded = true;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isDownloading = false;
         _downloadProgress = 0.0;
       });
+      await prefs.setBool('resources_downloading', false);
+      await prefs.setDouble('resources_download_progress', 0.0);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -431,6 +510,14 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
         );
       }
     }
+  }
+
+  List<List<String>> _chunkList(List<String> list, int chunkSize) {
+    List<List<String>> chunks = [];
+    for (var i = 0; i < list.length; i += chunkSize) {
+      chunks.add(list.sublist(i, i + chunkSize > list.length ? list.length : i + chunkSize));
+    }
+    return chunks;
   }
 }
 

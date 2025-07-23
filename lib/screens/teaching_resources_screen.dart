@@ -68,6 +68,7 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
   }
 
   Future<void> _downloadAllLessons() async {
+    if (!mounted) return;
     setState(() { _isDownloading = true; });
     final levels = await LessonService().loadLevels();
     // Save built-in lessons as JSON string
@@ -93,6 +94,7 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
       final customLessons = query.docs.map((doc) => doc.data()).toList();
       await prefs.setString('offline_custom_lessons_$_username', json.encode(customLessons));
     }
+    if (!mounted) return;
     setState(() { _allLessonsDownloaded = true; _isDownloading = false; });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -165,67 +167,6 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                 children: [
                   // (Top section removed as requested)
                   
-                  // Download button (only show on mobile, not web)
-                  if (!kIsWeb && _isOnline && !_allLessonsDownloaded) ...[
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Material(
-                        elevation: 4,
-                        borderRadius: BorderRadius.circular(12),
-                        shadowColor: const Color(0xFF6B5B95).withOpacity(0.3),
-                        child: InkWell(
-                          onTap: _isDownloading ? null : _downloadAllLessons,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: _isDownloading
-                                    ? [Colors.grey[400]!, Colors.grey[500]!]
-                                    : [const Color(0xFF6B5B95), const Color(0xFF5A4A83)],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (_isDownloading)
-                                  const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                else
-                                  const Icon(
-                                    Icons.download,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  _isDownloading 
-                                      ? 'Descargando...' 
-                                      : 'Descargar para uso sin conexión',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  
-                  const SizedBox(height: 12),
                   // Custom Lessons card
                   _buildResourceCard(
                     context,

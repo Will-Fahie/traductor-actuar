@@ -6,6 +6,11 @@ import 'package:myapp/screens/learning_mode_screen.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:myapp/services/lesson_service.dart';
 import 'package:myapp/screens/create_custom_lesson_screen.dart';
+import 'package:myapp/services/tts_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 
 class CategoryDetailScreen extends StatefulWidget {
   final Lesson lesson;
@@ -49,6 +54,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
   }
 
   void _playAudio(String path, int index) async {
+    if (!mounted) return;
     setState(() {
       _playingIndex = index;
     });
@@ -57,6 +63,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
       await _audioPlayer.play(AssetSource(path.replaceFirst('assets/', '')));
       await _audioPlayer.onPlayerComplete.first;
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -74,6 +81,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
         ),
       );
     } finally {
+      if (!mounted) return;
       setState(() {
         _playingIndex = null;
       });
@@ -648,9 +656,34 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                         ? Colors.white
                         : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
                   ),
-                  onPressed: item.audioPath.isNotEmpty
-                      ? () => _playAudio(item.audioPath, index)
-                      : null,
+                  onPressed: () async {
+                    // Add web check before accessing file system
+                    if (kIsWeb) {
+                      // On web, directly use TTS service
+                      await playEnglishTTS(item.english, context: context);
+                      return;
+                    }
+                    
+                    // Original mobile/desktop logic
+                    final appDocDir = await getApplicationDocumentsDirectory();
+                    final safeName = item.english.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+                    final filePath = '${appDocDir.path}/offline_lesson_audio/${safeName}.mp3';
+                    final file = File(filePath);
+                    final connectivity = await Connectivity().checkConnectivity();
+                    final isOffline = connectivity == ConnectivityResult.none;
+                    
+                    print('Checking for audio file: $filePath');
+                    if (await file.exists()) {
+                      final player = AudioPlayer();
+                      await player.play(DeviceFileSource(file.path));
+                    } else if (isOffline) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('No se pudo reproducir el audio. Descargue el audio para usarlo sin conexión.')),
+                      );
+                    } else {
+                      await playEnglishTTS(item.english, context: context);
+                    }
+                  },
                 ),
               ),
             ],

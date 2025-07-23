@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   static const Color primaryColor = Color(0xFFE91E63);
@@ -21,12 +20,10 @@ class AppTheme {
         onSurface: textColor,
       ),
       scaffoldBackgroundColor: backgroundColor,
-      textTheme: GoogleFonts.interTextTheme(
-        ThemeData.light().textTheme.copyWith(
-          headlineSmall: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: textColor),
-          bodyMedium: const TextStyle(fontSize: 16, color: textColor),
-          labelLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+      textTheme: TextTheme(
+        headlineSmall: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 24, color: textColor),
+        bodyMedium: TextStyle(fontFamily: 'Inter', fontSize: 16, color: textColor),
+        labelLarge: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
       ),
       cardTheme: CardThemeData(
         elevation: 2,
@@ -39,21 +36,21 @@ class AppTheme {
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+          textStyle: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primaryColor,
-          textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+          textStyle: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: textColor),
-        titleTextStyle: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
+        iconTheme: IconThemeData(color: textColor),
+        titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primaryColor,

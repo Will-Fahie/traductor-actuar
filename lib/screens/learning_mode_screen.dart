@@ -4,6 +4,11 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:myapp/services/lesson_service.dart';
 import 'package:myapp/screens/lesson_screen.dart';
 import 'package:myapp/screens/custom_lessons_screen.dart'; // Added import for CustomLessonsScreen
+import 'package:myapp/services/tts_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 
 class LearningModeScreen extends StatefulWidget {
   final List<LearningQuestion> questions;
@@ -21,8 +26,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
   int? _selectedOptionIndex;
   String? _typedAnswer;
   final TextEditingController _textController = TextEditingController();
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  
+  // final AudioPlayer _audioPlayer = AudioPlayer(); // Removed
   late AnimationController _animationController;
   late AnimationController _progressAnimationController;
   late Animation<double> _fadeAnimation;
@@ -45,7 +49,6 @@ class _LearningModeScreenState extends State<LearningModeScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -53,7 +56,6 @@ class _LearningModeScreenState extends State<LearningModeScreen>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
     _slideAnimation = Tween<double>(
       begin: 50.0,
       end: 0.0,
@@ -61,7 +63,6 @@ class _LearningModeScreenState extends State<LearningModeScreen>
       parent: _animationController,
       curve: Curves.easeOutCubic,
     ));
-    
     _scaleAnimation = Tween<double>(
       begin: 0.8,
       end: 1.0,
@@ -69,14 +70,13 @@ class _LearningModeScreenState extends State<LearningModeScreen>
       parent: _animationController,
       curve: Curves.elasticOut,
     ));
-    
     _animationController.forward();
     _progressAnimationController.forward();
   }
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
+    // _audioPlayer.dispose(); // Removed
     _textController.dispose();
     _animationController.dispose();
     _progressAnimationController.dispose();
@@ -196,7 +196,6 @@ class _LearningModeScreenState extends State<LearningModeScreen>
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     bool isCorrect = _answered && options[_selectedOptionIndex!] == correctAnswer;
-
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -231,11 +230,9 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               String optionText = entry.value;
               bool isThisCorrect = optionText == correctAnswer;
               bool isSelected = _selectedOptionIndex == idx;
-              
               Color buttonColor;
               Color textColor;
               IconData? icon;
-              
               if (_answered) {
                 if (isThisCorrect) {
                   buttonColor = Colors.green;
@@ -257,7 +254,6 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                     : Colors.white;
                 textColor = isDarkMode ? Colors.white : Colors.black87;
               }
-
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: AnimatedContainer(
@@ -414,10 +410,39 @@ class _LearningModeScreenState extends State<LearningModeScreen>
             ),
             child: Column(
               children: [
-                Icon(
-                  Icons.headphones_rounded,
-                  size: 48,
-                  color: Colors.blue[700],
+                IconButton(
+                  icon: const Icon(Icons.volume_up_rounded),
+                  onPressed: () async {
+                    // Add web check for audio playback
+                    if (kIsWeb) {
+                      // On web, directly use TTS service
+                      await playEnglishTTS(question.correctEntry.english, context: context);
+                      return;
+                    }
+                    
+                    // Original mobile/desktop logic
+                    final appDocDir = await getApplicationDocumentsDirectory();
+                    final safeName = question.correctEntry.english.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+                    final filePath = '${appDocDir.path}/offline_lesson_audio/$safeName.mp3';
+                    final file = File(filePath);
+                    if (await file.exists()) {
+                      final player = AudioPlayer();
+                      await player.play(DeviceFileSource(file.path));
+                      return;
+                    }
+                    // Check connectivity before calling TTS
+                    final connectivity = await Connectivity().checkConnectivity();
+                    if (connectivity == ConnectivityResult.none) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Sin conexión. Descargue el audio para usarlo sin conexión.')),
+                        );
+                      }
+                      return;
+                    }
+                    // Fallback to TTS if online
+                    await playEnglishTTS(question.correctEntry.english, context: context);
+                  },
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -449,11 +474,24 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               color: Colors.transparent,
               child: InkWell(
                 onTap: () async {
-                  await _audioPlayer.play(
-                    AssetSource(
-                      question.correctEntry.audioPath.replaceFirst('assets/', ''),
-                    ),
-                  );
+                  // Add web check for audio playback
+                  if (kIsWeb) {
+                    // On web, directly use TTS service
+                    await playEnglishTTS(question.correctEntry.english, context: context);
+                    return;
+                  }
+                  
+                  // Original mobile/desktop logic
+                  final appDocDir = await getApplicationDocumentsDirectory();
+                  final safeName = question.correctEntry.english.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+                  final filePath = '${appDocDir.path}/offline_lesson_audio/$safeName.mp3';
+                  final file = File(filePath);
+                  if (await file.exists()) {
+                    final player = AudioPlayer();
+                    await player.play(DeviceFileSource(file.path));
+                  } else {
+                    await playEnglishTTS(question.correctEntry.english, context: context);
+                  }
                 },
                 customBorder: const CircleBorder(),
                 child: Container(
@@ -477,11 +515,9 @@ class _LearningModeScreenState extends State<LearningModeScreen>
             String optionText = entry.value;
             bool isThisCorrect = optionText == correctAnswer;
             bool isSelected = _selectedOptionIndex == idx;
-            
             Color buttonColor;
             Color textColor;
             IconData? icon;
-            
             if (_answered) {
               if (isThisCorrect) {
                 buttonColor = Colors.green;
@@ -503,7 +539,6 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                   : Colors.white;
               textColor = isDarkMode ? Colors.white : Colors.black87;
             }
-
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Material(
@@ -670,6 +705,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
     // Initialize state if not already
     _selectedWordsMap.putIfAbsent(qIndex, () => []);
     _availableWordsMap.putIfAbsent(qIndex, () => List<String>.from(correctWords)..shuffle());
+
     final selectedWords = _selectedWordsMap[qIndex]!;
     final availableWords = _availableWordsMap[qIndex]!;
     final isCorrect = _sentenceOrderCorrectMap[qIndex] ?? false;
