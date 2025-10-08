@@ -65,10 +65,10 @@ android {
         create("release") {
             // Use safe casting to avoid null pointer exceptions
             keyAlias = "upload"
-            keyPassword = "poacher1!"
+            keyPassword = "poacher123"
             // The path is relative to the app module directory
             storeFile = file("upload-keystore.jks")
-            storePassword = "poacher1!"
+            storePassword = "poacher123"
     }
     }
 

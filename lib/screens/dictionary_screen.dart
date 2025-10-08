@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/services/dictionary_service.dart';
 import 'dart:collection';
+import 'package:myapp/theme/app_theme.dart';
+import 'package:myapp/widgets/app_card.dart';
+import 'package:myapp/widgets/app_text_field.dart';
+import 'package:myapp/widgets/language_toggle.dart';
+import 'package:myapp/widgets/section_header.dart';
+import 'package:myapp/services/language_service.dart';
+import 'package:myapp/l10n/app_localizations.dart';
 
 class DictionaryScreen extends StatefulWidget {
   const DictionaryScreen({super.key});
@@ -87,17 +94,21 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Diccionario',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: AnimatedBuilder(
+          animation: LanguageService(),
+          builder: (context, child) {
+            final l10n = AppLocalizations.of(context);
+            return Text(l10n?.dictionary ?? 'Diccionario');
+          },
         ),
         elevation: 0,
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+
       ),
       body: FutureBuilder<List<DictionaryEntry>>(
         future: _entriesFuture,
@@ -108,13 +119,13 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    color: isDarkMode ? Colors.white : const Color(0xFF6B5B95),
+                    color: theme.colorScheme.primary,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.spacingMedium),
                   Text(
-                    'Cargando diccionario...',
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    AppLocalizations.of(context)?.loading ?? 'Cargando diccionario...',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.textTheme.bodySmall?.color,
                     ),
                   ),
                 ],
@@ -123,30 +134,28 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
           } else if (snapshot.hasError) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(32.0),
+                padding: const EdgeInsets.all(AppTheme.spacingXLarge),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.error_outline,
+                      Icons.error_outline_rounded,
                       size: 64,
-                      color: Colors.red[400],
+                      color: theme.colorScheme.error,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppTheme.spacingMedium),
                     Text(
-                      'Error al cargar el diccionario',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
+                      AppLocalizations.of(context)?.error != null 
+                        ? '${AppLocalizations.of(context)?.error} al cargar el ${AppLocalizations.of(context)?.dictionary?.toLowerCase()}'
+                        : 'Error al cargar el diccionario',
+                      style: theme.textTheme.headlineSmall,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppTheme.spacingSmall),
                     Text(
                       '${snapshot.error}',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.textTheme.bodySmall?.color,
                       ),
                     ),
                   ],
@@ -160,9 +169,9 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
               children: [
                 // Search bar and alphabet navigation
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppTheme.spacingMedium),
                   decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    color: theme.colorScheme.surface,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
@@ -173,88 +182,79 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                   ),
                   child: Column(
                     children: [
-                      TextField(
+                      AppTextField(
                         controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Buscar en inglés, achuar o español...',
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                          ),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(
-                                    Icons.clear,
-                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                  },
-                                )
-                              : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[100],
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                        ),
+                        hintText: AppLocalizations.of(context)?.searchInDictionary ?? 'Buscar en inglés, achuar o español...',
+                        prefixIcon: Icons.search_rounded,
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.clear_rounded,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                },
+                              )
+                            : null,
                       ),
                       // Alphabet navigation
                       if (!_isSearching) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppTheme.spacingMedium),
                         SizedBox(
-                          height: 40,
+                          height: 44,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             itemCount: allLetters.length,
+                            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingXSmall),
                             itemBuilder: (context, index) {
                               final letter = allLetters[index];
                               final isSelected = _selectedLetter == letter;
                               final hasEntries = _groupedEntries.containsKey(letter);
                               
                               return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: InkWell(
-                                  onTap: hasEntries ? () {
-                                    setState(() {
-                                      _selectedLetter = letter;
-                                    });
-                                  } : null,
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Container(
-                                    width: 40,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? const Color(0xFF6B5B95)
-                                          : hasEntries
-                                              ? (isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[200])
-                                              : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: hasEntries && !isSelected
-                                          ? null
-                                          : !hasEntries
-                                              ? Border.all(
-                                                  color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                                                  width: 1,
-                                                )
-                                              : null,
-                                    ),
-                                    child: Text(
-                                      letter,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : hasEntries
-                                                ? (isDarkMode ? Colors.white : const Color(0xFF6B5B95))
-                                                : (isDarkMode ? Colors.grey[700] : Colors.grey[400]),
+                                padding: const EdgeInsets.only(right: AppTheme.spacingSmall),
+                                child: Material(
+                                  color: isSelected
+                                      ? theme.colorScheme.primary
+                                      : hasEntries
+                                          ? theme.colorScheme.surface
+                                          : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusRound),
+                                  child: InkWell(
+                                    onTap: hasEntries ? () {
+                                      setState(() {
+                                        _selectedLetter = letter;
+                                      });
+                                    } : null,
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusRound),
+                                    child: Container(
+                                      width: 44,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(AppTheme.radiusRound),
+                                        border: !hasEntries
+                                            ? Border.all(
+                                                color: theme.dividerTheme.color ?? AppTheme.dividerColor,
+                                                width: 1,
+                                              )
+                                            : isSelected
+                                                ? null
+                                                : Border.all(
+                                                    color: theme.dividerTheme.color ?? AppTheme.dividerColor,
+                                                    width: 1,
+                                                  ),
+                                      ),
+                                      child: Text(
+                                        letter,
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          color: isSelected
+                                              ? Colors.white
+                                              : hasEntries
+                                                  ? theme.colorScheme.primary
+                                                  : theme.textTheme.bodySmall?.color,
+                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -263,13 +263,11 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                             },
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppTheme.spacingSmall),
                         Center(
                           child: Text(
-                            'Desliza para ver más letras',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                            AppLocalizations.of(context)?.swipeToSeeMore ?? 'Desliza para ver más letras',
+                            style: theme.textTheme.bodySmall?.copyWith(
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -289,23 +287,40 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
             );
           } else {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.book_outlined,
-                    size: 64,
-                    color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No se encontraron entradas',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              child: Padding(
+                padding: const EdgeInsets.all(AppTheme.spacingXLarge),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.book_outlined,
+                        size: 48,
+                        color: theme.colorScheme.primary.withOpacity(0.5),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppTheme.spacingLarge),
+                    Text(
+                      'No se encontraron entradas',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: theme.textTheme.bodySmall?.color,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingSmall),
+                    Text(
+                      AppLocalizations.of(context)?.dictionaryEmpty ?? 'El diccionario está vacío',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.textTheme.bodySmall?.color,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -315,21 +330,30 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
   }
 
   Widget _buildSearchResults(bool isDarkMode) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         // Results count
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 12,
+            horizontal: AppTheme.spacingMedium,
+            vertical: AppTheme.spacingMedium,
           ),
-          color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.grey[50],
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.05),
+            border: Border(
+              bottom: BorderSide(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+          ),
           child: Text(
             '${_filteredEntries.length} resultado${_filteredEntries.length != 1 ? 's' : ''} encontrado${_filteredEntries.length != 1 ? 's' : ''}',
-            style: TextStyle(
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-              fontSize: 14,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -340,26 +364,25 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.search_off,
+                        Icons.search_off_rounded,
                         size: 64,
-                        color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
+                        color: theme.textTheme.bodySmall?.color,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppTheme.spacingMedium),
                       Text(
                         'No se encontraron resultados',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: theme.textTheme.bodySmall?.color,
                         ),
                       ),
                     ],
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(AppTheme.spacingMedium),
                   itemCount: _filteredEntries.length,
                   itemBuilder: (context, index) {
-                    return _buildEntryCard(_filteredEntries[index], isDarkMode);
+                    return _buildEntryCard(_filteredEntries[index], theme);
                   },
                 ),
         ),
@@ -369,161 +392,112 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 
   Widget _buildLetterList(bool isDarkMode) {
     final letterEntries = _groupedEntries[_selectedLetter] ?? [];
+    final theme = Theme.of(context);
     
     if (letterEntries.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.info_outline,
-              size: 64,
-              color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No hay palabras que empiecen con "$_selectedLetter"',
-              style: TextStyle(
-                fontSize: 18,
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
+              child: Center(
+                child: Text(
+                  _selectedLetter,
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    color: theme.colorScheme.primary.withOpacity(0.5),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacingLarge),
+            Text(
+              AppLocalizations.of(context)?.words != null 
+                ? 'No hay ${AppLocalizations.of(context)?.words?.toLowerCase()} que empiecen con "$_selectedLetter"'
+                : 'No hay palabras que empiecen con "$_selectedLetter"',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.textTheme.bodySmall?.color,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
       );
     }
 
-    return Column(
-      children: [
-        // Letter header
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
-          ),
-          color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.grey[50],
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF6B5B95),
-                      Color(0xFF5A4A83),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    _selectedLetter,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                '${letterEntries.length} palabra${letterEntries.length != 1 ? 's' : ''}',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Entries list
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.only(bottom: 20),
-            itemCount: letterEntries.length,
-            itemBuilder: (context, index) {
-              return _buildEntryCard(letterEntries[index], isDarkMode);
-            },
-          ),
-        ),
-      ],
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppTheme.spacingMedium),
+      itemCount: letterEntries.length,
+      itemBuilder: (context, index) {
+        return _buildEntryCard(letterEntries[index], theme);
+      },
     );
   }
 
-  Widget _buildEntryCard(DictionaryEntry entry, bool isDarkMode) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Material(
-        elevation: isDarkMode ? 2 : 3,
-        borderRadius: BorderRadius.circular(12),
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        shadowColor: Colors.black.withOpacity(0.1),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                entry.english,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _buildLanguageRow(
-                'Achuar',
-                entry.achuar,
-                const Color(0xFF82B366),
-                isDarkMode,
-              ),
-              const SizedBox(height: 4),
-              _buildLanguageRow(
-                'Español',
-                entry.spanish,
-                const Color(0xFF88B0D3),
-                isDarkMode,
-              ),
-            ],
-          ),
+  Widget _buildEntryCard(DictionaryEntry entry, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.spacingSmall),
+      child: AppCard(
+        padding: const EdgeInsets.all(AppTheme.spacingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              entry.english,
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppTheme.spacingSmall),
+            _buildLanguageRow(
+              'Achuar',
+              entry.achuar,
+              AppTheme.accentColor,
+              theme,
+            ),
+            const SizedBox(height: AppTheme.spacingXSmall),
+            _buildLanguageRow(
+              'Español',
+              entry.spanish,
+              AppTheme.secondaryColor,
+              theme,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLanguageRow(String language, String text, Color color, bool isDarkMode) {
+  Widget _buildLanguageRow(String language, String text, Color color, ThemeData theme) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spacingSmall,
+            vertical: AppTheme.spacingXSmall,
+          ),
           decoration: BoxDecoration(
             color: color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
           ),
           child: Text(
             language,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+            style: theme.textTheme.labelSmall?.copyWith(
               color: color,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppTheme.spacingSmall),
         Expanded(
           child: Text(
             text,
-            style: TextStyle(
-              fontSize: 15,
-              color: isDarkMode ? Colors.grey[300] : Colors.black87,
-            ),
+            style: theme.textTheme.bodyMedium,
           ),
         ),
       ],
