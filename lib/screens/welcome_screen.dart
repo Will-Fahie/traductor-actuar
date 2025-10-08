@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:myapp/firebase_options.dart';
+import 'package:achuar_ingis/firebase_options.dart';
 import 'dart:math';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:myapp/theme/app_theme.dart';
-import 'package:myapp/widgets/app_card.dart';
-import 'package:myapp/widgets/app_button.dart';
-import 'package:myapp/widgets/info_banner.dart';
-import 'package:myapp/services/language_service.dart';
-import 'package:myapp/l10n/app_localizations.dart';
-import 'package:myapp/widgets/language_toggle.dart';
+import 'package:achuar_ingis/theme/app_theme.dart';
+import 'package:achuar_ingis/widgets/app_card.dart';
+import 'package:achuar_ingis/widgets/app_button.dart';
+import 'package:achuar_ingis/widgets/info_banner.dart';
+import 'package:achuar_ingis/services/language_service.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
+import 'package:achuar_ingis/widgets/language_toggle.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);

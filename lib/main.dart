@@ -1,23 +1,23 @@
 
 import 'package:flutter/material.dart';
-import 'package:myapp/screens/home_screen.dart';
-import 'package:myapp/screens/submission_tabs_screen.dart';
-import 'package:myapp/screens/animal_list_screen.dart';
-import 'package:myapp/screens/teaching_resources_screen.dart';
-import 'package:myapp/screens/dictionary_screen.dart';
-import 'package:myapp/screens/translator_screen.dart';
-import 'package:myapp/screens/loading_screen.dart';
-import 'package:myapp/theme/app_theme.dart';
+import 'package:achuar_ingis/screens/home_screen.dart';
+import 'package:achuar_ingis/screens/submission_tabs_screen.dart';
+import 'package:achuar_ingis/screens/animal_list_screen.dart';
+import 'package:achuar_ingis/screens/teaching_resources_screen.dart';
+import 'package:achuar_ingis/screens/dictionary_screen.dart';
+import 'package:achuar_ingis/screens/translator_screen.dart';
+import 'package:achuar_ingis/screens/loading_screen.dart';
+import 'package:achuar_ingis/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/welcome_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:myapp/firebase_options.dart';
-import 'package:myapp/screens/custom_lessons_screen.dart';
-import 'package:myapp/screens/create_custom_lesson_screen.dart';
-import 'package:myapp/screens/coming_soon_screen.dart';
+import 'package:achuar_ingis/firebase_options.dart';
+import 'package:achuar_ingis/screens/custom_lessons_screen.dart';
+import 'package:achuar_ingis/screens/create_custom_lesson_screen.dart';
+import 'package:achuar_ingis/screens/coming_soon_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:myapp/services/language_service.dart';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/services/language_service.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 class NotImplementedScreen extends StatelessWidget {

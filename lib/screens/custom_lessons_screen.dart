@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/screens/lesson_screen.dart';
-import 'package:myapp/models/vocabulary_item.dart';
-import 'package:myapp/services/lesson_service.dart';
-import 'package:myapp/screens/create_custom_lesson_screen.dart';
-import 'package:myapp/services/tts_service.dart';
+import 'package:achuar_ingis/screens/lesson_screen.dart';
+import 'package:achuar_ingis/models/vocabulary_item.dart';
+import 'package:achuar_ingis/services/lesson_service.dart';
+import 'package:achuar_ingis/screens/create_custom_lesson_screen.dart';
+import 'package:achuar_ingis/services/tts_service.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:async';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 
 class CustomLessonsScreen extends StatefulWidget {
   const CustomLessonsScreen({super.key});

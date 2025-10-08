@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/services/sync_service.dart';
-import 'package:myapp/services/language_service.dart';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/services/sync_service.dart';
+import 'package:achuar_ingis/services/language_service.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 
 class RecentScreen extends StatefulWidget {
   const RecentScreen({super.key});

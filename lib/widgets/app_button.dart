@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/theme/app_theme.dart';
+import 'package:achuar_ingis/theme/app_theme.dart';
 
 enum AppButtonType { primary, secondary, text, danger }
 enum AppButtonSize { small, medium, large }

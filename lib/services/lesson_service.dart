@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:myapp/models/vocabulary_item.dart';
+import 'package:achuar_ingis/models/vocabulary_item.dart';
 
 class Lesson {
   final String name;

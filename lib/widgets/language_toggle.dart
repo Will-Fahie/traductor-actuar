@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/services/language_service.dart';
-import 'package:myapp/widgets/app_button.dart';
+import 'package:achuar_ingis/services/language_service.dart';
+import 'package:achuar_ingis/widgets/app_button.dart';
 
 class LanguageToggle extends StatelessWidget {
   final AppButtonSize size;

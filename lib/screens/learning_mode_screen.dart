@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/models/learning_question.dart';
+import 'package:achuar_ingis/models/learning_question.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:myapp/services/lesson_service.dart';
-import 'package:myapp/screens/lesson_screen.dart';
-import 'package:myapp/screens/custom_lessons_screen.dart'; // Added import for CustomLessonsScreen
-import 'package:myapp/services/tts_service.dart';
+import 'package:achuar_ingis/services/lesson_service.dart';
+import 'package:achuar_ingis/screens/lesson_screen.dart';
+import 'package:achuar_ingis/screens/custom_lessons_screen.dart'; // Added import for CustomLessonsScreen
+import 'package:achuar_ingis/services/tts_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 
 class LearningModeScreen extends StatefulWidget {
   final List<LearningQuestion> questions;

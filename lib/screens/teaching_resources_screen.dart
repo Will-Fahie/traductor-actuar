@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/services/lesson_service.dart';
-import 'package:myapp/screens/lesson_choice_screen.dart';
+import 'package:achuar_ingis/services/lesson_service.dart';
+import 'package:achuar_ingis/screens/lesson_choice_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:myapp/theme/app_theme.dart';
-import 'package:myapp/widgets/section_header.dart';
-import 'package:myapp/services/language_service.dart';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/theme/app_theme.dart';
+import 'package:achuar_ingis/widgets/section_header.dart';
+import 'package:achuar_ingis/services/language_service.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 
 class TeachingResourcesScreen extends StatefulWidget {
   const TeachingResourcesScreen({super.key});

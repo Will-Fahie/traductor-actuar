@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/screens/submit_screen.dart';
-import 'package:myapp/screens/recent_screen.dart';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/screens/submit_screen.dart';
+import 'package:achuar_ingis/screens/recent_screen.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SubmissionTabsScreen extends StatefulWidget {

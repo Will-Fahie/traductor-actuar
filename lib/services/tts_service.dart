@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 import 'tts_web_helper_stub.dart'
     if (dart.library.html) 'tts_web_helper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';

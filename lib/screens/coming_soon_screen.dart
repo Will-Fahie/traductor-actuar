@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/theme/app_theme.dart';
-import 'package:myapp/services/language_service.dart';
-import 'package:myapp/l10n/app_localizations.dart';
-import 'package:myapp/widgets/language_toggle.dart';
+import 'package:achuar_ingis/theme/app_theme.dart';
+import 'package:achuar_ingis/services/language_service.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
+import 'package:achuar_ingis/widgets/language_toggle.dart';
 
 class ComingSoonScreen extends StatelessWidget {
   final String title;

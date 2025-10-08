@@ -4,10 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:translator/translator.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:myapp/services/sync_service.dart';
+import 'package:achuar_ingis/services/sync_service.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 
 class CreateCustomLessonScreen extends StatefulWidget {
   final String? lessonName;

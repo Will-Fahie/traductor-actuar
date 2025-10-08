@@ -6,20 +6,20 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:translator/translator.dart';
-import 'package:myapp/services/sync_service.dart';
-import 'package:myapp/services/tts_service.dart';
+import 'package:achuar_ingis/services/sync_service.dart';
+import 'package:achuar_ingis/services/tts_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:async';
-import 'package:myapp/theme/app_theme.dart';
-import 'package:myapp/widgets/app_card.dart';
-import 'package:myapp/widgets/app_button.dart';
+import 'package:achuar_ingis/theme/app_theme.dart';
+import 'package:achuar_ingis/widgets/app_card.dart';
+import 'package:achuar_ingis/widgets/app_button.dart';
 
-import 'package:myapp/widgets/info_banner.dart';
-import 'package:myapp/widgets/section_header.dart';
-import 'package:myapp/services/language_service.dart';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/widgets/info_banner.dart';
+import 'package:achuar_ingis/widgets/section_header.dart';
+import 'package:achuar_ingis/services/language_service.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 
 // Extension to provide missing BCP-47 language codes
 extension TranslateLanguageExtension on TranslateLanguage {

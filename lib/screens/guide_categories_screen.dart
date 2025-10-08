@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:myapp/services/tts_service.dart';
+import 'package:achuar_ingis/services/tts_service.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
-import 'package:myapp/widgets/language_toggle.dart';
-import 'package:myapp/services/language_service.dart';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/widgets/language_toggle.dart';
+import 'package:achuar_ingis/services/language_service.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 
 class GuideCategoriesScreen extends StatefulWidget {
   const GuideCategoriesScreen({super.key});

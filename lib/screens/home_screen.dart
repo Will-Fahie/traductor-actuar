@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/theme/app_theme.dart';
-import 'package:myapp/widgets/app_card.dart';
-import 'package:myapp/widgets/app_button.dart';
-import 'package:myapp/services/language_service.dart';
-import 'package:myapp/l10n/app_localizations.dart';
-import 'package:myapp/widgets/language_toggle.dart';
-import 'package:myapp/widgets/info_banner.dart';
-import 'package:myapp/widgets/section_header.dart';
+import 'package:achuar_ingis/theme/app_theme.dart';
+import 'package:achuar_ingis/widgets/app_card.dart';
+import 'package:achuar_ingis/widgets/app_button.dart';
+import 'package:achuar_ingis/services/language_service.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
+import 'package:achuar_ingis/widgets/language_toggle.dart';
+import 'package:achuar_ingis/widgets/info_banner.dart';
+import 'package:achuar_ingis/widgets/section_header.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

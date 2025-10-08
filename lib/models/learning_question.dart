@@ -1,4 +1,4 @@
-import 'package:myapp/models/vocabulary_item.dart';
+import 'package:achuar_ingis/models/vocabulary_item.dart';
 
 enum QuestionType {
   achuarToEnglish,

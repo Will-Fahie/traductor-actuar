@@ -1,18 +1,18 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:myapp/models/learning_question.dart';
-import 'package:myapp/models/vocabulary_item.dart';
-import 'package:myapp/screens/learning_mode_screen.dart';
+import 'package:achuar_ingis/models/learning_question.dart';
+import 'package:achuar_ingis/models/vocabulary_item.dart';
+import 'package:achuar_ingis/screens/learning_mode_screen.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:myapp/services/lesson_service.dart';
-import 'package:myapp/screens/create_custom_lesson_screen.dart';
-import 'package:myapp/services/tts_service.dart';
+import 'package:achuar_ingis/services/lesson_service.dart';
+import 'package:achuar_ingis/screens/create_custom_lesson_screen.dart';
+import 'package:achuar_ingis/services/tts_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/l10n/app_localizations.dart';
+import 'package:achuar_ingis/l10n/app_localizations.dart';
 
 class CategoryDetailScreen extends StatefulWidget {
   final Lesson lesson;

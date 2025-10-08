@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:myapp/services/sync_service.dart';
-import 'package:myapp/firebase_options.dart';
+import 'package:achuar_ingis/services/sync_service.dart';
+import 'package:achuar_ingis/firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/screens/welcome_screen.dart';
+import 'package:achuar_ingis/screens/welcome_screen.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
