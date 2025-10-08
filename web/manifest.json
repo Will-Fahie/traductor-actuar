@@ -1,11 +1,11 @@
 {
-    "name": "myapp",
-    "short_name": "myapp",
+    "name": "Achuar-Ingis",
+    "short_name": "Achuar-Ingis",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#hexcode",
     "theme_color": "#hexcode",
-    "description": "A new Flutter project.",
+    "description": "Achuar-Ingis Translator",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
