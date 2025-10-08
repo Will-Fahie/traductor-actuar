@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:myapp/l10n/app_localizations.dart';
 
 class CategoryDetailScreen extends StatefulWidget {
   final Lesson lesson;
@@ -70,7 +72,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
             children: [
               const Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 12),
-              Expanded(child: Text("No se pudo reproducir el audio: $e")),
+              Expanded(child: Text("${AppLocalizations.of(context)?.couldNotPlayAudioError ?? 'Could not play audio'}: $e")),
             ],
           ),
           backgroundColor: Colors.red,
@@ -88,9 +90,17 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
     }
   }
 
-  void _startNewLearningSession() {
+  void _startNewLearningSession() async {
     final random = Random();
     final shuffledData = List<VocabularyItem>.from(widget.lesson.entries)..shuffle();
+    
+    // Check if lesson has been downloaded for offline use
+    final prefs = await SharedPreferences.getInstance();
+    final lessonDownloaded = prefs.getBool('offline_lesson_${widget.lesson.name}_downloaded') ?? false;
+    final customLessonDownloaded = prefs.getBool('offline_custom_lesson_${widget.lesson.name}_downloaded') ?? false;
+    final isDownloaded = lessonDownloaded || customLessonDownloaded;
+    
+    print('[LearningMode] Lesson "${widget.lesson.name}" downloaded: $isDownloaded');
     
     final session = shuffledData.map((entry) {
       final isMultiWord = entry.english.trim().split(' ').length > 1;
@@ -99,8 +109,12 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
         QuestionType.achuarToEnglish,
         QuestionType.englishToAchuar,
         QuestionType.typeEnglish,
-        QuestionType.audioToAchuar,
       ];
+      
+      // Only include audio questions if lesson has been downloaded
+      if (isDownloaded) {
+        allowedTypes.add(QuestionType.audioToAchuar);
+      }
       
       if (isMultiWord) {
         allowedTypes.add(QuestionType.sentenceOrder);
@@ -196,16 +210,16 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Modo de Aprendizaje',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)?.learningMode ?? 'Modo de Aprendizaje',
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                '¿Desea reanudar la sesión anterior o comenzar una nueva?',
+                AppLocalizations.of(context)?.resumeOrStartNew ?? '¿Desea reanudar la sesión anterior o comenzar una nueva?',
                 style: TextStyle(
                   fontSize: 16,
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
@@ -227,9 +241,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Reanudar',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)?.resume ?? 'Reanudar',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -252,9 +266,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Nueva Sesión',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)?.newSession ?? 'Nueva Sesión',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -310,7 +324,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                         if (isCustomLesson)
                           ElevatedButton.icon(
                             icon: const Icon(Icons.edit, color: Colors.white),
-                            label: const Text('Edit', style: TextStyle(color: Colors.white)),
+                            label: Text(AppLocalizations.of(context)?.edit ?? 'Editar', style: const TextStyle(color: Colors.white)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blueGrey,
                               foregroundColor: Colors.white,
@@ -320,8 +334,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               elevation: 0,
                             ),
-                            onPressed: () {
-                              Navigator.push(
+                            onPressed: () async {
+                              final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => CreateCustomLessonScreen(
@@ -337,6 +351,24 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                                   ),
                                 ),
                               );
+                              
+                              // If the lesson was updated, refresh the data
+                              if (result != null && result['success'] == true && result['lessonData'] != null) {
+                                final updatedData = result['lessonData'] as Map<String, dynamic>;
+                                final updatedEntries = (updatedData['entries'] as List).map((e) => 
+                                  VocabularyItem(
+                                    achuar: e['achuar'] ?? '',
+                                    english: e['english'] ?? '',
+                                    spanish: e['spanish'] ?? '',
+                                    audioPath: '', // Custom lessons don't have audio initially
+                                  )
+                                ).toList();
+                                
+                                setState(() {
+                                  widget.lesson.entries.clear();
+                                  widget.lesson.entries.addAll(updatedEntries);
+                                });
+                              }
                             },
                           ),
                       ],
@@ -402,32 +434,31 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                                         ),
                                       ),
                                       const SizedBox(width: 16),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Iniciar Modo de Aprendizaje',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              AppLocalizations.of(context)?.startLearningMode ?? 'Iniciar Modo de Aprendizaje',
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                          ),
-                                          Text(
-                                            _learningSession != null
-                                                ? 'Continua tu progreso'
-                                                : 'Practica con ejercicios interactivos',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.white.withOpacity(0.9),
+                                            Text(
+                                              _learningSession != null
+                                                  ? (AppLocalizations.of(context)?.continueYourProgress ?? 'Continua tu progreso')
+                                                  : (AppLocalizations.of(context)?.practiceInteractive ?? 'Practica con ejercicios interactivos'),
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white.withOpacity(0.9),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      const Spacer(),
-                                      Icon(
-                                        Icons.arrow_forward_rounded,
-                                        color: Colors.white.withOpacity(0.8),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -448,7 +479,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                             color: isDarkMode ? Colors.white : Colors.black87,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Buscar palabras...',
+                            hintText: AppLocalizations.of(context)?.searchInLesson ?? 'Buscar palabras...',
                             hintStyle: TextStyle(
                               color: isDarkMode ? Colors.grey[600] : Colors.grey[500],
                             ),
@@ -674,11 +705,54 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen>
                     
                     print('Checking for audio file: $filePath');
                     if (await file.exists()) {
-                      final player = AudioPlayer();
-                      await player.play(DeviceFileSource(file.path));
+                      try {
+                        final player = AudioPlayer();
+                        await player.play(DeviceFileSource(file.path));
+                      } catch (e) {
+                        print('[AUDIO] Error playing local audio file: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.info_outline, color: Colors.white, size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      AppLocalizations.of(context)?.redownloadLessonMessage ?? 'Could not play audio. Re-download the lesson when online to update the audio.',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Colors.orange[700],
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          );
+                        }
+                      }
                     } else if (isOffline) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No se pudo reproducir el audio. Descargue el audio para usarlo sin conexión.')),
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.cloud_off, color: Colors.white, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  AppLocalizations.of(context)?.audioNotAvailableOffline ?? 'Audio no disponible sin conexión. Descargue la lección cuando esté en línea para guardar el audio para uso offline.',
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.blue[700],
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       );
                     } else {
                       await playEnglishTTS(item.english, context: context);

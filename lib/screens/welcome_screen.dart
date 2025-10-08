@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,6 +6,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:myapp/firebase_options.dart';
 import 'dart:math';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:myapp/theme/app_theme.dart';
+import 'package:myapp/widgets/app_card.dart';
+import 'package:myapp/widgets/app_button.dart';
+import 'package:myapp/widgets/info_banner.dart';
+import 'package:myapp/services/language_service.dart';
+import 'package:myapp/l10n/app_localizations.dart';
+import 'package:myapp/widgets/language_toggle.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
@@ -15,6 +23,7 @@ class WelcomeScreen extends StatefulWidget {
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
   bool _isConnected = true;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void initState() {
@@ -22,15 +31,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     _initConnectivity();
   }
 
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _initConnectivity() async {
     final connectivityResult = await Connectivity().checkConnectivity();
-    setState(() {
-      _isConnected = !connectivityResult.contains(ConnectivityResult.none);
-    });
-    Connectivity().onConnectivityChanged.listen((result) {
+    if (mounted) {
       setState(() {
-        _isConnected = !result.contains(ConnectivityResult.none);
+        _isConnected = !connectivityResult.contains(ConnectivityResult.none);
       });
+    }
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
+      if (mounted) {
+        setState(() {
+          _isConnected = !result.contains(ConnectivityResult.none);
+        });
+      }
     });
   }
 
@@ -38,7 +57,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     final TextEditingController controller = TextEditingController();
     String? errorMessage;
     bool loading = false;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     await showDialog(
       context: context,
@@ -57,12 +77,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Color(0xFF6B5B95),
-                          Color(0xFF5A4A83),
+                          AppTheme.primaryColor.withOpacity(0.8),
+                          AppTheme.primaryColor,
                         ],
                       ),
                       borderRadius: BorderRadius.circular(10),
@@ -88,12 +108,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Ingrese su nombre de usuario',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    ),
+                  AnimatedBuilder(
+                    animation: LanguageService(),
+                    builder: (context, child) {
+                      final l10n = AppLocalizations.of(context);
+                      return Text(
+                        l10n?.enterUsername ?? 'Ingrese su nombre de usuario',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -115,8 +141,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF6B5B95),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryColor,
                           width: 2,
                         ),
                       ),
@@ -155,7 +181,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     const SizedBox(height: 24),
                     Center(
                       child: CircularProgressIndicator(
-                        color: const Color(0xFF6B5B95),
+                        color: AppTheme.primaryColor,
                       ),
                     ),
                   ]
@@ -164,11 +190,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               actions: [
                 TextButton(
                   onPressed: loading ? null : () => Navigator.of(context).pop(),
-                  child: Text(
-                    'Cancelar',
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    ),
+                  child: AnimatedBuilder(
+                    animation: LanguageService(),
+                    builder: (context, child) {
+                      final l10n = AppLocalizations.of(context);
+                      return Text(
+                        l10n?.cancel ?? 'Cancelar',
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      );
+                    },
                   ),
                 ),
                 ElevatedButton(
@@ -178,7 +210,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           final username = controller.text.trim();
                           if (username.isEmpty) {
                             setState(() {
-                              errorMessage = 'Por favor, ingrese un nombre de usuario.';
+                              final l10n = AppLocalizations.of(context);
+                              errorMessage = l10n?.pleaseEnterUsername ?? 'Por favor, ingrese un nombre de usuario.';
                             });
                             return;
                           }
@@ -195,6 +228,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             if (userDoc.exists) {
                               final prefs = await SharedPreferences.getInstance();
                               await prefs.setString('username', username);
+                              await prefs.setBool('guest_mode', false); // Set guest mode to false for existing users
                               print('Saved username to SharedPreferences (existing): ' + username);
                               Navigator.of(context).pop();
                               Navigator.of(context).pushNamedAndRemoveUntil('/loading', (route) => false);
@@ -212,12 +246,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6B5B95),
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     ),
                   ),
-                  child: const Text('Entrar'),
+                  child: AnimatedBuilder(
+                    animation: LanguageService(),
+                    builder: (context, child) {
+                      final l10n = AppLocalizations.of(context);
+                      return Text(
+                        l10n?.enter ?? 'Entrar',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             );
@@ -234,6 +281,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('username', guestUsername);
+    await prefs.setBool('guest_mode', true); // Set guest mode flag
     Navigator.of(context).pushNamedAndRemoveUntil('/loading', (route) => false);
   }
 
@@ -242,7 +290,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     String? errorMessage;
     bool loading = false;
     bool infoShown = false;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     await showDialog(
       context: context,
@@ -266,7 +315,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       children: [
                         Icon(
                           Icons.info_outline,
-                          color: const Color(0xFF88B0D3),
+                          color: AppTheme.secondaryColor,
                           size: 28,
                         ),
                         const SizedBox(width: 12),
@@ -299,7 +348,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF88B0D3).withOpacity(0.1),
+                            color: AppTheme.secondaryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Column(
@@ -310,7 +359,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,
-                                  color: const Color(0xFF88B0D3),
+                                  color: AppTheme.secondaryColor,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -330,12 +379,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF88B0D3),
+                          backgroundColor: AppTheme.secondaryColor,
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text('Entendido'),
+                        child: const Text(
+                          'Entendido',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -353,12 +409,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Color(0xFF88B0D3),
-                          Color(0xFF6B8CAE),
+                          AppTheme.secondaryColor.withOpacity(0.8),
+                          AppTheme.secondaryColor,
                         ],
                       ),
                       borderRadius: BorderRadius.circular(10),
@@ -411,8 +467,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF88B0D3),
+                        borderSide: BorderSide(
+                          color: AppTheme.secondaryColor,
                           width: 2,
                         ),
                       ),
@@ -451,7 +507,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     const SizedBox(height: 24),
                     Center(
                       child: CircularProgressIndicator(
-                        color: const Color(0xFF88B0D3),
+                        color: AppTheme.secondaryColor,
                       ),
                     ),
                   ]
@@ -460,11 +516,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               actions: [
                 TextButton(
                   onPressed: loading ? null : () => Navigator.of(context).pop(),
-                  child: Text(
-                    'Cancelar',
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    ),
+                  child: AnimatedBuilder(
+                    animation: LanguageService(),
+                    builder: (context, child) {
+                      final l10n = AppLocalizations.of(context);
+                      return Text(
+                        l10n?.cancel ?? 'Cancelar',
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      );
+                    },
                   ),
                 ),
                 ElevatedButton(
@@ -476,7 +538,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           
                           if (username.isEmpty) {
                             setState(() {
-                              errorMessage = 'Por favor, ingrese un nombre de usuario.';
+                              final l10n = AppLocalizations.of(context);
+                              errorMessage = l10n?.pleaseEnterUsername ?? 'Por favor, ingrese un nombre de usuario.';
                             });
                             return;
                           }
@@ -514,6 +577,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 
                             final prefs = await SharedPreferences.getInstance();
                             await prefs.setString('username', username);
+                            await prefs.setBool('guest_mode', false); // Set guest mode to false for regular users
                             
                             Navigator.of(context).pop();
                             Navigator.of(context).pushNamedAndRemoveUntil('/loading', (route) => false);
@@ -525,12 +589,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF88B0D3),
+                    backgroundColor: AppTheme.secondaryColor,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Crear'),
+                  child: const Text(
+                    'Crear',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             );
@@ -569,103 +640,141 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           );
         }
         
-        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        final theme = Theme.of(context);
+        final isDarkMode = theme.brightness == Brightness.dark;
         
         return Scaffold(
-          backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            actions: const [
+              LanguageToggle(),
+              SizedBox(width: 16),
+            ],
+          ),
           body: SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(AppTheme.spacingLarge),
                 child: Column(
                   children: [
-                    const SizedBox(height: 60),
-                    // Removed logo container here
-                    const SizedBox(height: 40),
-                    Text(
-                      'Traductor Achuar',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 60),
-                    // Existing user button
-                    _buildWelcomeButton(
-                      onPressed: _isConnected ? () => _showExistingUserDialog(context) : null,
-                      icon: Icons.person_outline,
-                      label: 'Usuario existente',
-                      subtitle: 'Ingresa con tu cuenta',
-                      gradient: const [
-                        Color(0xFF6B5B95),
-                        Color(0xFF5A4A83),
-                      ],
-                      isDarkMode: isDarkMode,
-                      isEnabled: _isConnected,
-                    ),
-                    const SizedBox(height: 16),
-                    // New user button
-                    _buildWelcomeButton(
-                      onPressed: _isConnected ? () => _showNewUserDialog(context) : null,
-                      icon: Icons.person_add_outlined,
-                      label: 'Nuevo usuario',
-                      subtitle: 'Crea tu cuenta',
-                      gradient: const [
-                        Color(0xFF88B0D3),
-                        Color(0xFF6B8CAE),
-                      ],
-                      isDarkMode: isDarkMode,
-                      isEnabled: _isConnected,
-                    ),
-                    const SizedBox(height: 16),
-                    // Guest button
-                    _buildWelcomeButton(
-                      onPressed: () => _loginAsGuest(context),
-                      icon: Icons.account_circle_outlined,
-                      label: 'Entrar como invitado',
-                      subtitle: 'Explora sin cuenta',
-                      gradient: [
-                        Colors.grey[600]!,
-                        Colors.grey[700]!,
-                      ],
-                      isDarkMode: isDarkMode,
-                      isEnabled: true,
-                    ),
-                    const SizedBox(height: 40),
-                    if (!_isConnected) ...[
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.wifi_off, color: Colors.red, size: 24),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Por favor, conéctese a internet para iniciar sesión o crear una cuenta.',
-                                style: TextStyle(
-                                  color: Colors.red[700],
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
+                    const SizedBox(height: AppTheme.spacingXLarge * 2),
+                    // App branding
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            theme.colorScheme.primary.withOpacity(0.8),
+                            theme.colorScheme.primary,
                           ],
                         ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-                    ],
-                    Text(
-                      'Selecciona cómo deseas continuar',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                      child: const Icon(
+                        Icons.translate_rounded,
+                        color: Colors.white,
+                        size: 50,
                       ),
                     ),
+                    const SizedBox(height: AppTheme.spacingLarge),
+                    Text(
+                      'Traductor Achuar',
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingSmall),
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return Text(
+                          l10n?.welcome ?? 'Bienvenido',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: theme.textTheme.bodySmall?.color,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: AppTheme.spacingXLarge * 1.5),
+                    // Existing user button
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildWelcomeButton(
+                          onPressed: _isConnected ? () => _showExistingUserDialog(context) : null,
+                          icon: Icons.person_outline_rounded,
+                          label: l10n?.existingUser ?? 'Usuario existente',
+                          subtitle: l10n?.loginWithAccount ?? 'Ingresa con tu cuenta',
+                          color: AppTheme.primaryColor,
+                          theme: theme,
+                          isEnabled: _isConnected,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: AppTheme.spacingMedium),
+                    // New user button
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildWelcomeButton(
+                          onPressed: _isConnected ? () => _showNewUserDialog(context) : null,
+                          icon: Icons.person_add_outlined,
+                          label: l10n?.newUser ?? 'Nuevo usuario',
+                          subtitle: l10n?.createAccount ?? 'Crea tu cuenta',
+                          color: AppTheme.secondaryColor,
+                          theme: theme,
+                          isEnabled: _isConnected,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: AppTheme.spacingMedium),
+                    // Guest button
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildWelcomeButton(
+                          onPressed: () => _loginAsGuest(context),
+                          icon: Icons.account_circle_outlined,
+                          label: l10n?.enterAsGuest ?? 'Entrar como invitado',
+                          subtitle: l10n?.exploreWithoutAccount ?? 'Explora sin cuenta',
+                          color: theme.textTheme.bodySmall?.color ?? Colors.grey,
+                          theme: theme,
+                          isEnabled: true,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: AppTheme.spacingXLarge),
+                    if (!_isConnected) ...[
+                      AnimatedBuilder(
+                        animation: LanguageService(),
+                        builder: (context, child) {
+                          final l10n = AppLocalizations.of(context);
+                          return InfoBanner(
+                            title: l10n?.noInternetConnection ?? 'Sin conexión a internet',
+                            message: l10n?.noInternetMessage ?? 'Por favor, conéctese a internet para iniciar sesión o crear una cuenta.',
+                            type: InfoBannerType.error,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppTheme.spacingLarge),
+                    ],
                   ],
                 ),
               ),
@@ -681,75 +790,61 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     required IconData icon,
     required String label,
     required String subtitle,
-    required List<Color> gradient,
-    required bool isDarkMode,
+    required Color color,
+    required ThemeData theme,
     bool isEnabled = true,
   }) {
-    return Material(
-      elevation: 4,
-      borderRadius: BorderRadius.circular(16),
-      shadowColor: gradient[0].withOpacity(0.3),
-      child: InkWell(
-        onTap: isEnabled ? onPressed : null,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: isEnabled ? null : Border.all(color: Colors.grey[400]!, width: 1),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: gradient,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  color: isEnabled ? null : Colors.grey[300],
-                ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: isEnabled ? (isDarkMode ? Colors.white : Colors.black87) : Colors.grey[400],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isEnabled ? (isDarkMode ? Colors.grey[400] : Colors.grey[600]) : Colors.grey[400],
-                      ),
-                    ),
+    return AppCard(
+      onTap: isEnabled ? onPressed : null,
+      elevation: isEnabled ? AppTheme.elevationLarge : AppTheme.elevationSmall,
+      padding: const EdgeInsets.all(AppTheme.spacingMedium),
+      child: Opacity(
+        opacity: isEnabled ? 1.0 : 0.6,
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    color.withOpacity(0.8),
+                    color,
                   ],
                 ),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: isEnabled ? (isDarkMode ? Colors.grey[600] : Colors.grey[400]) : Colors.grey[400],
-                size: 18,
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 28,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: AppTheme.spacingMedium),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: AppTheme.spacingXSmall),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: theme.textTheme.bodySmall?.color,
+              size: 18,
+            ),
+          ],
         ),
       ),
     );

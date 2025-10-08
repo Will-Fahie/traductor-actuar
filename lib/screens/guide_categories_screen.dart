@@ -9,6 +9,9 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'package:myapp/widgets/language_toggle.dart';
+import 'package:myapp/services/language_service.dart';
+import 'package:myapp/l10n/app_localizations.dart';
 
 class GuideCategoriesScreen extends StatefulWidget {
   const GuideCategoriesScreen({super.key});
@@ -24,26 +27,31 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
   double _downloadProgress = 0.0;
   bool _isDownloaded = false;
   bool _isConnected = true;
+  bool _hasOutdatedAudio = false;
   StreamSubscription<dynamic>? _connectivitySubscription;
+  Timer? _connectivityDebounceTimer;
   
-  final List<CategoryData> _categories = [
-    CategoryData(
-      title: 'Aves',
-      subtitle: 'Descubre las especies de aves',
-      icon: Icons.flutter_dash,
-      route: '/birds',
-      color: const Color(0xFF88B0D3),
-      gradientEnd: const Color(0xFF68A0D3),
-    ),
-    CategoryData(
-      title: 'Mamíferos',
-      subtitle: 'Explora los mamíferos nativos',
-      icon: Icons.pets,
-      route: '/mammals',
-      color: const Color(0xFF82B366),
-      gradientEnd: const Color(0xFF62A346),
-    ),
-  ];
+  List<CategoryData> _getCategories(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return [
+      CategoryData(
+        title: l10n?.birds ?? 'Aves',
+        subtitle: l10n?.discoverBirdSpecies ?? 'Descubre las especies de aves',
+        icon: Icons.flutter_dash,
+        route: '/birds',
+        color: const Color(0xFF88B0D3),
+        gradientEnd: const Color(0xFF68A0D3),
+      ),
+      CategoryData(
+        title: l10n?.mammals ?? 'Mamíferos',
+        subtitle: l10n?.exploreNativeMammals ?? 'Explora los mamíferos nativos',
+        icon: Icons.pets,
+        route: '/mammals',
+        color: const Color(0xFF82B366),
+        gradientEnd: const Color(0xFF62A346),
+      ),
+    ];
+  }
 
   @override
   void initState() {
@@ -55,20 +63,106 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
     _animationController.forward();
     _restoreDownloadState();
     _initConnectivity();
+    _checkForOutdatedAudioOnInit();
   }
 
   Future<void> _initConnectivity() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    setState(() {
-      _isConnected = !connectivityResult.contains(ConnectivityResult.none);
-    });
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
       if (mounted) {
         setState(() {
-          _isConnected = !result.contains(ConnectivityResult.none);
+          _isConnected = !connectivityResult.contains(ConnectivityResult.none);
         });
       }
-    });
+      _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
+        if (mounted) {
+          try {
+            // Cancel previous timer to debounce rapid changes
+            _connectivityDebounceTimer?.cancel();
+            _connectivityDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                setState(() {
+                  _isConnected = !result.contains(ConnectivityResult.none);
+                });
+                
+                // Check for outdated audio when coming back online
+                if (!result.contains(ConnectivityResult.none) && _isDownloaded) {
+                  _checkForOutdatedAudioOnInit();
+                } else if (result.contains(ConnectivityResult.none)) {
+                  // Clear outdated audio flag when going offline
+                  setState(() {
+                    _hasOutdatedAudio = false;
+                  });
+                }
+              }
+            });
+          } catch (e) {
+            print('[CONNECTIVITY] Error updating connection status: $e');
+          }
+        }
+      });
+    } catch (e) {
+      print('[CONNECTIVITY] Error initializing connectivity: $e');
+      if (mounted) {
+        setState(() => _isConnected = true);
+      }
+    }
+  }
+
+  Future<void> _checkForOutdatedAudioOnInit() async {
+    if (_isDownloaded && _isConnected) {
+      try {
+        final hasOutdated = await _checkForOutdatedAudio();
+        if (mounted) {
+          setState(() {
+            _hasOutdatedAudio = hasOutdated;
+          });
+        }
+      } catch (e) {
+        print('[AUDIO] Error in _checkForOutdatedAudioOnInit: $e');
+        if (mounted) {
+          setState(() {
+            _hasOutdatedAudio = false;
+          });
+        }
+      }
+    }
+  }
+
+  Future<bool> _checkForOutdatedAudio() async {
+    try {
+      // Check connectivity first
+      final connectivity = await Connectivity().checkConnectivity();
+      if (connectivity == ConnectivityResult.none) {
+        print('[AUDIO] Offline - skipping outdated audio check');
+        return false;
+      }
+      
+      final prefs = await SharedPreferences.getInstance();
+      final downloadedDataString = prefs.getString('downloaded_animals_data');
+      if (downloadedDataString == null) return false;
+      
+      final downloadedAnimals = jsonDecode(downloadedDataString) as List<dynamic>;
+      
+      // Get current data from Firestore
+      final firestore = FirebaseFirestore.instance;
+      final birdsSnapshot = await firestore.collection('animals_birds').get();
+      final mammalsSnapshot = await firestore.collection('animals_mammals').get();
+      
+      final currentBirds = birdsSnapshot.docs.map((doc) => doc.data()).toList();
+      final currentMammals = mammalsSnapshot.docs.map((doc) => doc.data()).toList();
+      final currentAnimals = [...currentBirds, ...currentMammals];
+      
+      // Compare English names
+      final downloadedNames = downloadedAnimals.map((a) => a['englishName']).toSet();
+      final currentNames = currentAnimals.map((a) => a['englishName']).toSet();
+      
+      // Check if any names have changed
+      return !setEquals(downloadedNames, currentNames);
+    } catch (e) {
+      print('[AUDIO] Error checking for outdated audio: $e');
+      return false;
+    }
   }
 
   Future<void> _restoreDownloadState() async {
@@ -104,6 +198,7 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
   void dispose() {
     _animationController.dispose();
     _connectivitySubscription?.cancel();
+    _connectivityDebounceTimer?.cancel();
     super.dispose();
   }
 
@@ -114,11 +209,21 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text(
-          'Recursos de Guía',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: AnimatedBuilder(
+          animation: LanguageService(),
+          builder: (context, child) {
+            final l10n = AppLocalizations.of(context);
+            return Text(
+              l10n?.guideResourcesTitle ?? 'Recursos de Guía',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            );
+          },
         ),
         elevation: 0,
+        actions: const [
+          LanguageToggle(),
+          SizedBox(width: 16),
+        ],
         backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
       ),
       body: SafeArea(
@@ -127,15 +232,23 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
           children: [
             
             // Category Cards
-            ..._categories.asMap().entries.map((entry) {
-              final index = entry.key;
-              final category = entry.value;
-              return _buildCategoryCard(
-                context,
-                category,
-                isDarkMode,
-              );
-            }).toList(),
+            AnimatedBuilder(
+              animation: LanguageService(),
+              builder: (context, child) {
+                final categories = _getCategories(context);
+                return Column(
+                  children: categories.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final category = entry.value;
+                    return _buildCategoryCard(
+                      context,
+                      category,
+                      isDarkMode,
+                    );
+                  }).toList(),
+                );
+              },
+            ),
             
             const SizedBox(height: 32),
             
@@ -239,10 +352,11 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
   }
 
   Widget _buildDownloadSection(BuildContext context, bool isDarkMode) {
-    // Hardcode image size to 130MB, text data to 0.5MB
+    // Hardcode image size to 130MB, text data to 0.5MB, audio to 9.5MB
     final double estimatedTextMB = 0.5;
     final double estimatedImageMB = 130.0;
-    final double estimatedMB = estimatedTextMB + estimatedImageMB;
+    final double estimatedAudioMB = 9.5;
+    final double estimatedMB = estimatedTextMB + estimatedImageMB + estimatedAudioMB;
     final String sizeEstimate = estimatedMB.toStringAsFixed(1);
     final isOffline = !_isConnected;
     if (kIsWeb) return const SizedBox.shrink();
@@ -282,20 +396,47 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Modo sin conexión',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return Text(
+                          l10n?.offlineMode ?? 'Modo sin conexión',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        );
+                      },
                     ),
-                    Text(
-                      'Descargue el texto y las imágenes para uso sin conexión',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return Text(
+                          l10n?.downloadTextImagesAudio ?? 'Descargue el texto, imágenes y audio para uso sin conexión',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return Text(
+                          l10n?.downloadMayTakeMinutes ?? 'La descarga puede tomar varios minutos',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -315,27 +456,67 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
             ),
             const SizedBox(height: 12),
             Text(
-              'Descargando... ${(_downloadProgress * 100).toInt()}%',
+              _downloadProgress < 0.3 
+                ? 'Descargando texto... ${(_downloadProgress * 100).toInt()}%'
+                : _downloadProgress < 0.65
+                  ? 'Descargando imágenes... ${(_downloadProgress * 100).toInt()}%'
+                  : 'Descargando audio... ${(_downloadProgress * 100).toInt()}%',
               style: TextStyle(
                 fontSize: 14,
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Por favor, mantenga la aplicación abierta',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ] else if (_isDownloaded) ...[
+            if (_hasOutdatedAudio) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Algunos audios descargados están desactualizados',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.orange[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: null,
-                icon: const Icon(Icons.check_circle, size: 20),
-                label: const Text(
-                  'Descargado',
-                  style: TextStyle(
+                onPressed: _hasOutdatedAudio ? () => _downloadResources(context) : null,
+                icon: Icon(_hasOutdatedAudio ? Icons.refresh_rounded : Icons.check_circle, size: 20),
+                label: Text(
+                  _hasOutdatedAudio ? 'Actualizar audio' : 'Descargado',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: _hasOutdatedAudio ? Colors.orange : Colors.green,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -350,9 +531,9 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: isOffline || _isDownloading ? null : () => _downloadResources(context),
-                icon: Icon(Icons.download_rounded, size: 20, color: isOffline ? Colors.grey : Colors.blue),
+                icon: Icon(Icons.download_rounded, size: 20, color: isOffline ? Colors.grey : Colors.white),
                 label: Text(
-                  '130 MB',
+                  '140 MB',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -377,10 +558,11 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
 
   Future<void> _downloadResources(BuildContext context) async {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Por favor, no abandone esta página mientras se descarga.'),
-        duration: Duration(seconds: 3),
+      SnackBar(
+        content: Text(l10n?.doNotLeaveWhileDownloading ?? 'Please do not leave this page while downloading.'),
+        duration: const Duration(seconds: 3),
       ),
     );
     final prefs = await SharedPreferences.getInstance();
@@ -401,19 +583,31 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
       if (!mounted) return;
 
       // Download birds
-      final birdsSnapshot = await firestore.collection('animals_birds').get();
-      if (!mounted) return;
-      final birdsData = birdsSnapshot.docs.map((doc) => doc.data()).toList();
-      await prefs.setString('offline_birds', jsonEncode(birdsData));
-      setState(() => _downloadProgress = 0.3);
-      await prefs.setDouble('resources_download_progress', 0.3);
-      if (!mounted) return;
+      List<Map<String, dynamic>> birdsData = [];
+      try {
+        final birdsSnapshot = await firestore.collection('animals_birds').get();
+        if (!mounted) return;
+        birdsData = birdsSnapshot.docs.map((doc) => doc.data()).toList();
+        await prefs.setString('offline_birds', jsonEncode(birdsData));
+        setState(() => _downloadProgress = 0.3);
+        await prefs.setDouble('resources_download_progress', 0.3);
+        if (!mounted) return;
+      } catch (e) {
+        print('[DOWNLOAD] Error downloading birds: $e');
+        // Continue with mammals even if birds fail
+      }
 
       // Download mammals
-      final mammalsSnapshot = await firestore.collection('animals_mammals').get();
-      if (!mounted) return;
-      final mammalsData = mammalsSnapshot.docs.map((doc) => doc.data()).toList();
-      await prefs.setString('offline_mammals', jsonEncode(mammalsData));
+      List<Map<String, dynamic>> mammalsData = [];
+      try {
+        final mammalsSnapshot = await firestore.collection('animals_mammals').get();
+        if (!mounted) return;
+        mammalsData = mammalsSnapshot.docs.map((doc) => doc.data()).toList();
+        await prefs.setString('offline_mammals', jsonEncode(mammalsData));
+      } catch (e) {
+        print('[DOWNLOAD] Error downloading mammals: $e');
+        // Continue with images even if mammals fail
+      }
       setState(() => _downloadProgress = 0.3);
       await prefs.setDouble('resources_download_progress', 0.3);
       if (!mounted) return;
@@ -443,21 +637,57 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
           }
         }
         completed++;
-        final progress = 0.3 + 0.7 * (completed / imageNames.length);
+        final progress = 0.3 + 0.35 * (completed / imageNames.length);
         setState(() => _downloadProgress = progress);
         await prefs.setDouble('resources_download_progress', progress);
         if (!mounted) return;
       }
 
+      // Download all animal audio (skip existing files)
+      final animalNames = allAnimals.map((a) => a['englishName']).where((name) => name != null && name.toString().isNotEmpty).toSet();
+      completed = 0;
+      int skippedCount = 0;
+      for (final animalName in animalNames) {
+        try {
+          // Check if audio file already exists
+          final dir = await getApplicationDocumentsDirectory();
+          final safeName = animalName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+          final animalDir = Directory('${dir.path}/offline_animal_audio');
+          final filePath = '${animalDir.path}/$safeName.mp3';
+          final file = File(filePath);
+          
+          if (file.existsSync()) {
+            print('[DOWNLOAD] Skipping existing audio: $animalName');
+            skippedCount++;
+          } else {
+            print('[DOWNLOAD] Downloading new audio: $animalName');
+            await downloadAndSaveEnglishTTS(animalName, forAnimal: true);
+          }
+        } catch (e) {
+          print('[DOWNLOAD] Error downloading audio for $animalName: $e');
+          // Continue with other animals even if one fails
+        }
+        completed++;
+        final progress = 0.65 + 0.35 * (completed / animalNames.length);
+        setState(() => _downloadProgress = progress);
+        await prefs.setDouble('resources_download_progress', progress);
+        if (!mounted) return;
+      }
+      
+      if (skippedCount > 0) {
+        print('[DOWNLOAD] Skipped $skippedCount existing audio files');
+      }
+
       // Show success message
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Recursos e imágenes descargados con éxito!'),
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(l10n?.resourcesImagesAudioDownloaded ?? 'Resources, images and audio downloaded successfully!')),
               ],
             ),
             backgroundColor: Colors.green,
@@ -469,6 +699,10 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
         );
       }
 
+      // Store download timestamp and animal data for future comparison
+      await prefs.setInt('resources_download_timestamp', DateTime.now().millisecondsSinceEpoch);
+      await prefs.setString('downloaded_animals_data', jsonEncode(allAnimals));
+      
       // Persist download state
       await prefs.setBool('resources_downloaded', true);
       await prefs.setBool('resources_downloading', false);
@@ -481,6 +715,7 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
         _isDownloading = false;
         _downloadProgress = 0.0;
         _isDownloaded = true;
+        _hasOutdatedAudio = false; // Clear outdated audio flag after successful update
       });
     } catch (e) {
       if (!mounted) return;
@@ -498,7 +733,7 @@ class _GuideCategoriesScreenState extends State<GuideCategoriesScreen>
               children: [
                 const Icon(Icons.error_outline, color: Colors.white),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Error al descargar: $e')),
+                Expanded(child: Text('${AppLocalizations.of(context)?.errorDownloading ?? 'Error downloading'}: $e')),
               ],
             ),
             backgroundColor: Colors.red,

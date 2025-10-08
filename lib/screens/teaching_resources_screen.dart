@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/services/lesson_service.dart';
-import 'package:myapp/models/vocabulary_item.dart';
 import 'package:myapp/screens/lesson_choice_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:myapp/theme/app_theme.dart';
+import 'package:myapp/widgets/section_header.dart';
+import 'package:myapp/services/language_service.dart';
+import 'package:myapp/l10n/app_localizations.dart';
 
 class TeachingResourcesScreen extends StatefulWidget {
   const TeachingResourcesScreen({super.key});
@@ -18,22 +20,25 @@ class TeachingResourcesScreen extends StatefulWidget {
 class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
   late Future<List<Level>> _levelsFuture;
   bool _isOnline = true;
-  bool _allLessonsDownloaded = false;
-  bool _isDownloading = false;
-  String? _username;
+  bool _isGuestMode = false;
 
   @override
   void initState() {
     super.initState();
     _initUserAndConnectivity();
+    _checkGuestMode();
     _levelsFuture = _loadLevels();
+  }
+  
+  Future<void> _checkGuestMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isGuestMode = prefs.getBool('guest_mode') ?? false;
+    setState(() {
+      _isGuestMode = isGuestMode;
+    });
   }
 
   Future<void> _initUserAndConnectivity() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _username = prefs.getString('username');
-    });
     await _checkConnectivityAndLocal();
   }
 
@@ -47,9 +52,6 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
         _isOnline = !result.contains(ConnectivityResult.none);
       });
     });
-    final prefs = await SharedPreferences.getInstance();
-    _allLessonsDownloaded = prefs.containsKey('offline_lessons');
-    setState(() {});
   }
 
   Future<List<Level>> _loadLevels() async {
@@ -67,56 +69,24 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
     return builtInLevels;
   }
 
-  Future<void> _downloadAllLessons() async {
-    if (!mounted) return;
-    setState(() { _isDownloading = true; });
-    final levels = await LessonService().loadLevels();
-    // Save built-in lessons as JSON string
-    final levelsJson = {
-      'levels': levels.map((l) => {
-        'name': l.name,
-        'lessons': l.lessons.map((lesson) => {
-          'name': lesson.name,
-          'entries': lesson.entries.map((e) => {
-            'achuar': e.achuar,
-            'english': e.english,
-            'spanish': e.spanish,
-            'audioPath': e.audioPath,
-          }).toList(),
-        }).toList(),
-      }).toList(),
-    };
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('offline_lessons', json.encode(levelsJson));
-    // Download and save custom lessons for the user
-    if (_username != null) {
-      final query = await FirebaseFirestore.instance.collection('custom_lessons').where('username', isEqualTo: _username).get();
-      final customLessons = query.docs.map((doc) => doc.data()).toList();
-      await prefs.setString('offline_custom_lessons_$_username', json.encode(customLessons));
-    }
-    if (!mounted) return;
-    setState(() { _allLessonsDownloaded = true; _isDownloading = false; });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Lecciones descargadas para uso sin conexión.'),
-        backgroundColor: Colors.green[600],
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
     
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Recursos de Enseñanza',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: AnimatedBuilder(
+          animation: LanguageService(),
+          builder: (context, child) {
+            final l10n = AppLocalizations.of(context);
+            return Text(l10n?.teachingResourcesTitle ?? 'Recursos de Enseñanza');
+          },
         ),
         elevation: 0,
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+
       ),
       body: FutureBuilder<List<Level>>(
         future: _levelsFuture,
@@ -127,14 +97,20 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    color: const Color(0xFFFA6900),
+                    color: theme.colorScheme.primary,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Cargando recursos...',
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    ),
+                  const SizedBox(height: AppTheme.spacingMedium),
+                  AnimatedBuilder(
+                    animation: LanguageService(),
+                    builder: (context, child) {
+                      final l10n = AppLocalizations.of(context);
+                      return Text(
+                        l10n?.loadingResources ?? 'Cargando recursos...',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.textTheme.bodySmall?.color,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -145,15 +121,15 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.error_outline,
+                    Icons.error_outline_rounded,
                     size: 64,
-                    color: Colors.red[400],
+                    color: theme.colorScheme.error,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.spacingMedium),
                   Text(
                     'Error: ${snapshot.error}',
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.textTheme.bodySmall?.color,
                     ),
                   ),
                 ],
@@ -162,21 +138,39 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
           } else if (snapshot.hasData) {
             final levels = snapshot.data!;
             return SingleChildScrollView(
+              padding: const EdgeInsets.all(AppTheme.spacingMedium),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // (Top section removed as requested)
-                  
-                  // Custom Lessons card
-                  _buildResourceCard(
-                    context,
-                    title: 'Mis Lecciones',
-                    subtitle: 'Crea y gestiona tus propias lecciones',
-                    icon: Icons.edit_note,
-                    color: const Color(0xFF88B0D3),
-                    onTap: () => Navigator.pushNamed(context, '/custom_lessons'),
-                    isDarkMode: isDarkMode,
+                  // Section header
+                  AnimatedBuilder(
+                    animation: LanguageService(),
+                    builder: (context, child) {
+                      final l10n = AppLocalizations.of(context);
+                      return SectionHeader(
+                        title: l10n?.availableResources ?? 'Recursos disponibles',
+                        subtitle: l10n?.accessLessonsAndMaterials ?? 'Accede a lecciones y materiales educativos',
+                        icon: Icons.school_rounded,
+                      );
+                    },
                   ),
+                  
+                  // Custom Lessons card (hidden in guest mode)
+                  if (!_isGuestMode)
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildResourceCard(
+                          context,
+                          title: l10n?.myLessons ?? 'Mis Lecciones',
+                          subtitle: l10n?.createAndManageLessons ?? 'Crea y gestiona tus propias lecciones',
+                          icon: Icons.edit_note_rounded,
+                          color: AppTheme.secondaryColor,
+                          onTap: () => Navigator.pushNamed(context, '/custom_lessons'),
+                        );
+                      },
+                    ),
                 
                   
                   // Level cards with different colors
@@ -185,10 +179,10 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                     final level = entry.value;
                     
                     final levelColors = [
-                      const Color(0xFF6B5B95), // Purple
-                      const Color(0xFF82B366), // Green
+                      AppTheme.primaryColor,
+                      AppTheme.accentColor,
                       const Color(0xFFFA6900), // Orange
-                      const Color(0xFF88B0D3), // Blue
+                      AppTheme.secondaryColor,
                     ];
                     
                     final color = levelColors[index % levelColors.length];
@@ -199,13 +193,13 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                     //   totalCategories += lesson.categories?.length ?? 0;
                     // }
                     
+                    final l10n = AppLocalizations.of(context);
                     return _buildLevelCard(
                       context,
                       level: level,
-                      subtitle: '${level.lessons.length} lecciones',
+                      subtitle: '${level.lessons.length} ${l10n?.lessons ?? 'lecciones'}',
                       icon: Icons.school_outlined,
                       color: color,
-                      isDarkMode: isDarkMode,
                     );
                   }).toList(),
                   
@@ -218,18 +212,31 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.school_outlined,
-                    size: 64,
-                    color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No se encontraron recursos',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
                     ),
+                    child: Icon(
+                      Icons.school_outlined,
+                      size: 48,
+                      color: theme.colorScheme.primary.withOpacity(0.5),
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spacingLarge),
+                  AnimatedBuilder(
+                    animation: LanguageService(),
+                    builder: (context, child) {
+                      final l10n = AppLocalizations.of(context);
+                      return Text(
+                        l10n?.noResourcesFound ?? 'No se encontraron recursos',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: theme.textTheme.bodySmall?.color,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -247,35 +254,37 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
-    required bool isDarkMode,
   }) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Material(
         elevation: isDarkMode ? 2 : 4,
-        borderRadius: BorderRadius.circular(16),
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        color: theme.cardColor,
         shadowColor: Colors.black.withOpacity(0.1),
-      child: InkWell(
+        child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-        child: Container(
-            padding: const EdgeInsets.all(20),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+          child: Container(
+            padding: const EdgeInsets.all(AppTheme.spacingLarge),
             child: Row(
               children: [
                 Container(
                   width: 56,
                   height: 56,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                       colors: [
                         color.withOpacity(0.8),
                         color,
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     boxShadow: [
                       BoxShadow(
                         color: color.withOpacity(0.3),
@@ -290,25 +299,22 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                     size: 28,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppTheme.spacingMedium),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: TextStyle(
-                          fontSize: 18,
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.white : Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppTheme.spacingSmall),
                       Text(
                         subtitle,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.textTheme.bodySmall?.color,
                         ),
                       ),
                     ],
@@ -316,7 +322,7 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                 ),
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                  color: theme.textTheme.bodySmall?.color,
                   size: 18,
                 ),
               ],
@@ -333,14 +339,16 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
     required String subtitle,
     required IconData icon,
     required Color color,
-    required bool isDarkMode,
   }) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Material(
         elevation: isDarkMode ? 2 : 4,
-        borderRadius: BorderRadius.circular(16),
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        color: theme.cardColor,
         shadowColor: Colors.black.withOpacity(0.1),
         child: InkWell(
           onTap: () {
@@ -351,9 +359,9 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
               ),
             );
           },
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(AppTheme.spacingLarge),
             child: Row(
               children: [
                 Container(
@@ -368,7 +376,7 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                         color,
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     boxShadow: [
                       BoxShadow(
                         color: color.withOpacity(0.3),
@@ -383,25 +391,22 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                     size: 28,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppTheme.spacingMedium),
                 Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                level.name,
-                        style: TextStyle(
-                          fontSize: 18,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        level.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.white : Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppTheme.spacingSmall),
                       Text(
                         subtitle,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.textTheme.bodySmall?.color,
                         ),
                       ),
                     ],
@@ -409,7 +414,7 @@ class _TeachingResourcesScreenState extends State<TeachingResourcesScreen> {
                 ),
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                  color: theme.textTheme.bodySmall?.color,
                   size: 18,
                 ),
               ],

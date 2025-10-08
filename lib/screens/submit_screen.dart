@@ -5,6 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/services/sync_service.dart'; // Import the SyncService
+import 'package:myapp/widgets/language_toggle.dart';
+import 'package:myapp/services/language_service.dart';
+import 'package:myapp/l10n/app_localizations.dart';
 
 class SubmitScreen extends StatefulWidget {
   const SubmitScreen({super.key});
@@ -78,8 +81,9 @@ class _SubmitScreenState extends State<SubmitScreen> {
   
   void _submit() async {
     if (_achuarController.text.isEmpty || _spanishController.text.isEmpty) {
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, complete los campos obligatorios')),
+        SnackBar(content: Text(l10n?.pleaseCompleteRequiredFields ?? 'Please complete required fields')),
       );
       return;
     }
@@ -132,30 +136,48 @@ class _SubmitScreenState extends State<SubmitScreen> {
               size: 32,
             ),
           ),
-          title: Text(
-            isOffline ? 'Guardado localmente' : 'Éxito',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
+          title: AnimatedBuilder(
+            animation: LanguageService(),
+            builder: (context, child) {
+              final l10n = AppLocalizations.of(context);
+              return Text(
+                isOffline ? (l10n?.savedLocally ?? 'Guardado localmente') : (l10n?.success ?? 'Éxito'),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              );
+            },
           ),
-          content: Text(
-            isOffline
-                ? 'Tu contribución ha sido guardada y se subirá automáticamente cuando te conectes a internet.'
-                : 'Tu contribución ha sido enviada con éxito.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-            ),
+          content: AnimatedBuilder(
+            animation: LanguageService(),
+            builder: (context, child) {
+              final l10n = AppLocalizations.of(context);
+              return Text(
+                isOffline
+                    ? (l10n?.contributionSavedOffline ?? 'Tu contribución ha sido guardada y se subirá automáticamente cuando te conectes a internet.')
+                    : (l10n?.contributionSent ?? 'Tu contribución ha sido enviada con éxito.'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                ),
+              );
+            },
           ),
           actions: <Widget>[
             TextButton(
-              child: Text(
-                'Cerrar',
-                style: TextStyle(
-                  color: isDarkMode ? const Color(0xFF88B0D3) : const Color(0xFF6B5B95),
-                  fontWeight: FontWeight.w600,
-                ),
+              child: AnimatedBuilder(
+                animation: LanguageService(),
+                builder: (context, child) {
+                  final l10n = AppLocalizations.of(context);
+                  return Text(
+                    l10n?.close ?? 'Cerrar',
+                    style: TextStyle(
+                      color: isDarkMode ? const Color(0xFF88B0D3) : const Color(0xFF6B5B95),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  );
+                },
               ),
               onPressed: () {
                 Navigator.of(context).pop();
@@ -174,12 +196,19 @@ class _SubmitScreenState extends State<SubmitScreen> {
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text(
-          'Envío de Frases',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: AnimatedBuilder(
+          animation: LanguageService(),
+          builder: (context, child) {
+            final l10n = AppLocalizations.of(context);
+            return Text(
+              l10n?.phraseSubmissionTitle ?? 'Envío de Frases',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            );
+          },
         ),
         elevation: 0,
         backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -191,36 +220,78 @@ class _SubmitScreenState extends State<SubmitScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle('Frase en Achuar', Icons.language),
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildSectionTitle(l10n?.achuarPhrase ?? 'Frase en Achuar', Icons.language);
+                      },
+                    ),
                     const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _achuarController,
-                      hint: 'Ingrese la frase en Achuar',
-                      isDarkMode: isDarkMode,
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildTextField(
+                          controller: _achuarController,
+                          hint: l10n?.enterAchuarPhrase ?? 'Ingrese la frase en Achuar',
+                          isDarkMode: isDarkMode,
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
                     
-                    _buildSectionTitle('Frase en Español', Icons.translate),
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildSectionTitle(l10n?.spanishPhrase ?? 'Frase en Español', Icons.translate);
+                      },
+                    ),
                     const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _spanishController,
-                      hint: 'Ingrese la traducción en Español',
-                      isDarkMode: isDarkMode,
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildTextField(
+                          controller: _spanishController,
+                          hint: l10n?.enterSpanishTranslation ?? 'Ingrese la traducción en Español',
+                          isDarkMode: isDarkMode,
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
                     
-                    _buildSectionTitle('Ubicación', Icons.location_on),
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildSectionTitle(l10n?.location ?? 'Ubicación', Icons.location_on);
+                      },
+                    ),
                     const SizedBox(height: 8),
                     _buildDropdown(isDarkMode),
                     const SizedBox(height: 24),
                     
-                    _buildSectionTitle('Notas adicionales', Icons.note),
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildSectionTitle(l10n?.additionalNotes ?? 'Notas adicionales', Icons.note);
+                      },
+                    ),
                     const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _notesController,
-                      hint: 'Agregue cualquier información adicional (opcional)',
-                      isDarkMode: isDarkMode,
-                      maxLines: 3,
+                    AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return _buildTextField(
+                          controller: _notesController,
+                          hint: l10n?.additionalInfo ?? 'Agregue cualquier información adicional (opcional)',
+                          isDarkMode: isDarkMode,
+                          maxLines: 3,
+                        );
+                      },
                     ),
                     const SizedBox(height: 32),
                     
@@ -334,11 +405,17 @@ class _SubmitScreenState extends State<SubmitScreen> {
           alignedDropdown: true,
           child: DropdownButton<String>(
             isExpanded: true,
-            hint: Text(
-              'Seleccione una ubicación',
-              style: TextStyle(
-                color: isDarkMode ? Colors.grey[600] : Colors.grey[500],
-              ),
+            hint: AnimatedBuilder(
+              animation: LanguageService(),
+              builder: (context, child) {
+                final l10n = AppLocalizations.of(context);
+                return Text(
+                  l10n?.selectLocation ?? 'Seleccione una ubicación',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey[600] : Colors.grey[500],
+                  ),
+                );
+              },
             ),
             value: _selectedLocation,
             icon: Icon(
@@ -387,12 +464,18 @@ class _SubmitScreenState extends State<SubmitScreen> {
           children: [
             const Icon(Icons.send, size: 20),
             const SizedBox(width: 8),
-            const Text(
-              'Enviar contribución',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+            AnimatedBuilder(
+              animation: LanguageService(),
+              builder: (context, child) {
+                final l10n = AppLocalizations.of(context);
+                return Text(
+                  l10n?.submitContribution ?? 'Enviar contribución',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              },
             ),
           ],
         ),

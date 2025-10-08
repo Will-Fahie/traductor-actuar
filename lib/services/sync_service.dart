@@ -115,7 +115,32 @@ class SyncService {
 
   Future<void> _saveSubmissionLocally(Map<String, dynamic> submission) async {
     final prefs = await SharedPreferences.getInstance();
-    final pending = prefs.getStringList('pendingSubmissions') ?? [];
+    final submissionsValue = prefs.get('pendingSubmissions');
+    
+    List<String> pending = [];
+    
+    // Handle different storage formats
+    if (submissionsValue == null) {
+      // No existing data
+    } else if (submissionsValue is List<String>) {
+      pending = List<String>.from(submissionsValue);
+    } else if (submissionsValue is String) {
+      // Data was stored as JSON string, convert to list
+      try {
+        final decoded = json.decode(submissionsValue);
+        if (decoded is List) {
+          pending = decoded.map((item) => jsonEncode(item)).toList();
+        }
+      } catch (e) {
+        debugPrint('Error decoding existing submissions: $e');
+      }
+    } else if (submissionsValue is List) {
+      // Handle generic List type
+      pending = submissionsValue.map((item) => 
+        item is String ? item : jsonEncode(item)
+      ).toList();
+    }
+    
     pending.add(jsonEncode(submission));
     await prefs.setStringList('pendingSubmissions', pending);
     await loadPendingSubmissions();
@@ -126,14 +151,75 @@ class SyncService {
     final submissionsValue = prefs.get('pendingSubmissions');
 
     List<Map<String, dynamic>> pendingSubmissions = [];
-    if (submissionsValue is String) {
-      final decoded = json.decode(submissionsValue);
-      if (decoded is List) {
-        pendingSubmissions = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+    
+    try {
+      if (submissionsValue == null) {
+        // No submissions stored
+      } else if (submissionsValue is String) {
+        try {
+          final decoded = json.decode(submissionsValue);
+          if (decoded is List) {
+            pendingSubmissions = decoded.map((item) {
+              if (item is Map<String, dynamic>) {
+                return item;
+              } else if (item is Map) {
+                return Map<String, dynamic>.from(item);
+              } else {
+                debugPrint('Unexpected item type in decoded submissions: ${item.runtimeType}');
+                return <String, dynamic>{};
+              }
+            }).toList();
+          }
+        } catch (e) {
+          debugPrint('Error decoding submissions string: $e');
+        }
+      } else if (submissionsValue is List<String>) {
+        pendingSubmissions = submissionsValue.map((s) {
+          try {
+            final decoded = jsonDecode(s);
+            if (decoded is Map<String, dynamic>) {
+              return decoded;
+            } else if (decoded is Map) {
+              return Map<String, dynamic>.from(decoded);
+            } else {
+              debugPrint('Unexpected decoded type: ${decoded.runtimeType}');
+              return <String, dynamic>{};
+            }
+          } catch (e) {
+            debugPrint('Error decoding submission: $e');
+            return <String, dynamic>{};
+          }
+        }).where((item) => item.isNotEmpty).toList();
+      } else if (submissionsValue is List) {
+        // Handle other list types
+        pendingSubmissions = submissionsValue.map((item) {
+          if (item is Map<String, dynamic>) {
+            return item;
+          } else if (item is Map) {
+            return Map<String, dynamic>.from(item);
+          } else if (item is String) {
+            try {
+              final decoded = jsonDecode(item);
+              if (decoded is Map<String, dynamic>) {
+                return decoded;
+              } else if (decoded is Map) {
+                return Map<String, dynamic>.from(decoded);
+              }
+            } catch (e) {
+              debugPrint('Error decoding list item: $e');
+            }
+          }
+          debugPrint('Unexpected list item type: ${item.runtimeType}');
+          return <String, dynamic>{};
+        }).where((item) => item.isNotEmpty).cast<Map<String, dynamic>>().toList();
+      } else {
+        debugPrint('Unexpected submissions value type: ${submissionsValue.runtimeType}');
       }
-    } else if (submissionsValue is List<String>) {
-      pendingSubmissions = submissionsValue.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
+    } catch (e) {
+      debugPrint('Error loading pending submissions: $e');
+      pendingSubmissions = [];
     }
+    
     _pendingSubmissionsController.add(pendingSubmissions);
   }
 

@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/screens/lesson_screen.dart';
 import 'package:myapp/models/vocabulary_item.dart';
-import 'package:myapp/models/learning_question.dart';
 import 'package:myapp/services/lesson_service.dart';
 import 'package:myapp/screens/create_custom_lesson_screen.dart';
 import 'package:myapp/services/tts_service.dart';
@@ -11,6 +10,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:async';
+import 'package:myapp/l10n/app_localizations.dart';
 
 class CustomLessonsScreen extends StatefulWidget {
   const CustomLessonsScreen({super.key});
@@ -72,14 +72,33 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
 
   Future<void> _initConnectivity() async {
     final connectivityResult = await Connectivity().checkConnectivity();
+    final wasOffline = !_isConnected;
     setState(() {
       _isConnected = !connectivityResult.contains(ConnectivityResult.none);
     });
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
+    
+    // Sync pending changes if coming online
+    if (_isConnected && wasOffline) {
+      await _syncPendingChanges();
+    }
+    
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) async {
       if (mounted) {
+        final wasOfflineBefore = !_isConnected;
+        final isOnlineNow = !result.contains(ConnectivityResult.none);
+        
         setState(() {
-          _isConnected = !result.contains(ConnectivityResult.none);
+          _isConnected = isOnlineNow;
         });
+        
+        // Sync when coming back online
+        if (isOnlineNow && wasOfflineBefore) {
+          print('[CustomLessons] Connectivity restored, syncing pending changes...');
+          await _syncPendingChanges();
+        }
+        
+        // Refresh data when connectivity changes
+        setState(() {});
       }
     });
   }
@@ -90,6 +109,134 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
     super.dispose();
   }
 
+  Future<void> _syncPendingChanges() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Get pending deletions
+      final pendingDeletes = prefs.getStringList('pending_custom_lesson_deletes') ?? [];
+      print('[CustomLessons] Syncing ${pendingDeletes.length} pending deletions');
+      
+      // Delete from Firestore
+      for (final docId in pendingDeletes) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('custom_lessons')
+              .doc(docId)
+              .delete();
+          print('[CustomLessons] Synced deletion of $docId');
+        } catch (e) {
+          print('[CustomLessons] Error syncing deletion of $docId: $e');
+        }
+      }
+      
+      // Clear pending deletions
+      await prefs.remove('pending_custom_lesson_deletes');
+      
+      // Get pending edits (lessons in local storage that need syncing)
+      final pendingEdits = prefs.getStringList('pending_custom_lesson_edits') ?? [];
+      print('[CustomLessons] Syncing ${pendingEdits.length} pending edits');
+      
+      final localLessons = await _loadLessonsFromLocal();
+      
+      for (final docId in pendingEdits) {
+        try {
+          // Find the lesson in local storage
+          final lesson = localLessons.firstWhere(
+            (l) => l['id'] == docId,
+            orElse: () => {},
+          );
+          
+          if (lesson.isNotEmpty) {
+            // Remove the 'id' field before saving to Firestore
+            final lessonData = Map<String, dynamic>.from(lesson);
+            lessonData.remove('id');
+            
+            await FirebaseFirestore.instance
+                .collection('custom_lessons')
+                .doc(docId)
+                .set(lessonData);
+            print('[CustomLessons] Synced edit of $docId');
+          }
+        } catch (e) {
+          print('[CustomLessons] Error syncing edit of $docId: $e');
+        }
+      }
+      
+      // Clear pending edits
+      await prefs.remove('pending_custom_lesson_edits');
+      
+      print('[CustomLessons] Sync completed');
+    } catch (e) {
+      print('[CustomLessons] Error syncing pending changes: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadCustomLessons() async {
+    try {
+      // Try to load from Firestore first if online
+      if (_isConnected) {
+        try {
+          // Sync any pending changes first
+          await _syncPendingChanges();
+          
+          final query = await FirebaseFirestore.instance
+              .collection('custom_lessons')
+              .where('username', isEqualTo: _username)
+              .get();
+          
+          final lessons = query.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+          
+          // Save to local storage for offline access
+          await _saveLessonsLocally(lessons);
+          
+          return lessons;
+        } catch (e) {
+          print('[CustomLessons] Error loading from Firestore: $e');
+          // Fall back to local storage
+        }
+      }
+      
+      // Load from local storage
+      return await _loadLessonsFromLocal();
+    } catch (e) {
+      print('[CustomLessons] Error loading lessons: $e');
+      return [];
+    }
+  }
+
+  Future<void> _saveLessonsLocally(List<Map<String, dynamic>> lessons) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lessonsJson = lessons.map((lesson) => jsonEncode(lesson)).toList();
+      await prefs.setStringList('local_custom_lessons', lessonsJson);
+      print('[CustomLessons] Saved ${lessons.length} lessons locally');
+    } catch (e) {
+      print('[CustomLessons] Error saving lessons locally: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadLessonsFromLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lessonsJson = prefs.getStringList('local_custom_lessons') ?? [];
+      
+      final lessons = lessonsJson
+          .map((json) => jsonDecode(json) as Map<String, dynamic>)
+          .toList();
+      
+      print('[CustomLessons] Loaded ${lessons.length} lessons from local storage');
+      return lessons;
+    } catch (e) {
+      print('[CustomLessons] Error loading from local storage: $e');
+      return [];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -97,20 +244,17 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text(
-          'Lecciones personalizadas',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Text(
+          AppLocalizations.of(context)?.customLessons ?? 'Lecciones personalizadas',
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         elevation: 0,
         backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
       ),
       body: _username == null
           ? const Center(child: CircularProgressIndicator())
-          : StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('custom_lessons')
-                  .where('username', isEqualTo: _username)
-                  .snapshots(),
+          : FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadCustomLessons(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -136,9 +280,9 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                   );
                 }
                 
-                final docs = snapshot.data?.docs ?? [];
+                final lessons = snapshot.data ?? [];
                 
-                if (docs.isEmpty) {
+                if (lessons.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -150,7 +294,7 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          'No tienes lecciones personalizadas',
+                          AppLocalizations.of(context)?.noCustomLessons ?? 'No tienes lecciones personalizadas',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
@@ -159,7 +303,7 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Crea tu primera lección personalizada',
+                          AppLocalizations.of(context)?.createFirstLesson ?? 'Crea tu primera lección personalizada',
                           style: TextStyle(
                             fontSize: 14,
                             color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
@@ -183,11 +327,11 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                 
                 return ListView.builder(
                   padding: const EdgeInsets.only(top: 8, bottom: 80),
-                  itemCount: docs.length,
+                  itemCount: lessons.length,
                   itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    final lessonName = data['name'] ?? docs[index].id;
-                    final docId = docs[index].id;
+                    final data = lessons[index];
+                    final lessonName = data['name'] ?? data['id'] ?? 'Unknown Lesson';
+                    final docId = data['id'] ?? 'unknown_id';
                     final color = lessonColors[index % lessonColors.length];
                     final phraseCount = (data['entries'] as List?)?.length ?? 0;
                     final isDownloading = _downloadingLessons.contains(docId);
@@ -300,7 +444,7 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                                 ),
                                                 const SizedBox(width: 6),
                                                 Text(
-                                                  '$phraseCount frases',
+                                                  '$phraseCount ${AppLocalizations.of(context)?.phrases ?? 'frases'}',
                                                   style: TextStyle(
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.w600,
@@ -338,16 +482,32 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                       child: Material(
                                         color: Colors.transparent,
                                         child: InkWell(
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => CreateCustomLessonScreen(
-                                                  lessonName: lessonName,
-                                                  initialData: data,
+                                          onTap: () async {
+                                            try {
+                                              final result = await Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => CreateCustomLessonScreen(
+                                                    lessonName: lessonName,
+                                                    initialData: data,
+                                                  ),
                                                 ),
-                                              ),
-                                            );
+                                              );
+                                              
+                                              // If the lesson was updated, refresh the list
+                                              if (result != null && result['success'] == true) {
+                                                setState(() {
+                                                  // Trigger a rebuild to refresh the lesson list
+                                                });
+                                              }
+                                            } catch (e) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('${AppLocalizations.of(context)?.errorOpeningEditor ?? 'Error opening editor'}: $e'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
                                           },
                                           borderRadius: BorderRadius.circular(8),
                                           child: Padding(
@@ -364,7 +524,7 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Text(
-                                                  'Editar',
+                                                  AppLocalizations.of(context)?.edit ?? 'Editar',
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w500,
@@ -384,7 +544,7 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                         ? Colors.white.withOpacity(0.1) 
                                         : Colors.grey.withOpacity(0.2),
                                     ),
-                                    // Download button
+                                    // Download button - Only show on mobile/desktop
                                     if (!kIsWeb)
                                       Expanded(
                                         child: Material(
@@ -413,8 +573,8 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                                           _downloadingLessons.remove(docId);
                                                         });
                                                         messenger.showSnackBar(
-                                                          const SnackBar(
-                                                            content: Text('No English phrases to download in this lesson.'),
+                                                          SnackBar(
+                                                            content: Text(AppLocalizations.of(context)?.noEnglishPhrasesToDownload ?? 'No English phrases to download in this lesson.'),
                                                             backgroundColor: Colors.orange,
                                                           ),
                                                         );
@@ -451,7 +611,7 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                                               ),
                                                               const SizedBox(width: 12),
                                                               Text(
-                                                                'Descargados ${paths.length} archivos de audio',
+                                                                '${paths.length} ${AppLocalizations.of(context)?.audioFilesDownloaded ?? 'archivos de audio descargados'}',
                                                               ),
                                                             ],
                                                           ),
@@ -477,8 +637,8 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                                                 color: Colors.white,
                                                               ),
                                                               const SizedBox(width: 12),
-                                                              const Text(
-                                                                'Error al descargar audio',
+                                                              Text(
+                                                                AppLocalizations.of(context)?.errorDownloadingAudio ?? 'Error al descargar audio',
                                                               ),
                                                             ],
                                                           ),
@@ -524,7 +684,9 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                                     ),
                                                   const SizedBox(width: 8),
                                                   Text(
-                                                    isDownloaded ? 'Descargado' : 'Descargar',
+                                                    isDownloaded 
+                                                      ? (AppLocalizations.of(context)?.downloaded ?? 'Descargado')
+                                                      : (AppLocalizations.of(context)?.download ?? 'Descargar'),
                                                     style: TextStyle(
                                                       fontSize: 14,
                                                       fontWeight: FontWeight.w500,
@@ -537,6 +699,7 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                           ),
                                         ),
                                       ),
+                                    // Only add divider if download button is shown
                                     if (!kIsWeb)
                                       Container(
                                         width: 1,
@@ -571,7 +734,7 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Text(
-                                                  'Eliminar',
+                                                  AppLocalizations.of(context)?.delete ?? 'Delete',
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w500,
@@ -598,13 +761,27 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.pushNamed(context, '/create_custom_lesson');
+          try {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CreateCustomLessonScreen(),
+              ),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${AppLocalizations.of(context)?.errorOpeningLessonCreator ?? 'Error opening lesson creator'}: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         },
         backgroundColor: const Color(0xFF82B366),
         icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          'Nueva lección',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        label: Text(
+          AppLocalizations.of(context)?.newLesson ?? 'Nueva lección',
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -647,16 +824,16 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Eliminar lección',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)?.deleteLessonTitle ?? 'Delete lesson',
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                '¿Estás seguro de que deseas eliminar la lección "$lessonName"? Esta acción no se puede deshacer.',
+                '${AppLocalizations.of(context)?.deleteLessonConfirmation ?? 'Are you sure you want to delete the lesson'} "$lessonName"? ${AppLocalizations.of(context)?.actionCannotBeUndone ?? 'This action cannot be undone.'}',
                 style: TextStyle(
                   fontSize: 16,
                   color: isDarkMode 
@@ -677,9 +854,9 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Cancelar',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)?.cancel ?? 'Cancel',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -699,8 +876,8 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Eliminar',
+                      child: Text(
+                        AppLocalizations.of(context)?.delete ?? 'Delete',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -717,41 +894,101 @@ class _CustomLessonsScreenState extends State<CustomLessonsScreen> {
     );
     
     if (confirm == true) {
-      await FirebaseFirestore.instance
-        .collection('custom_lessons')
-        .doc(docId)
-        .delete();
-      
-      final prefs = await SharedPreferences.getInstance();
-      final key = 'offline_custom_lessons_${_username}';
-      if (prefs.containsKey(key)) {
-        final customJson = prefs.getString(key)!;
-        final customList = List<Map<String, dynamic>>.from(
-          json.decode(customJson)
-        );
-        customList.removeWhere(
-          (e) => (e['name'] ?? docId) == lessonName
-        );
-        await prefs.setString(key, json.encode(customList));
-      }
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Lección eliminada'),
-              ],
+      try {
+        // Delete from local storage first (always works offline)
+        final prefs = await SharedPreferences.getInstance();
+        
+        // Remove from local_custom_lessons
+        final localLessons = await _loadLessonsFromLocal();
+        localLessons.removeWhere((lesson) => lesson['id'] == docId || lesson['name'] == lessonName);
+        await _saveLessonsLocally(localLessons);
+        
+        // Remove downloaded audio state
+        await prefs.remove('offline_custom_lesson_${lessonName}_downloaded');
+        _downloadedLessons.remove(lessonName);
+        
+        // Also remove from old storage format if exists
+        final key = 'offline_custom_lessons_${_username}';
+        if (prefs.containsKey(key)) {
+          final customJson = prefs.getString(key)!;
+          final customList = List<Map<String, dynamic>>.from(
+            json.decode(customJson)
+          );
+          customList.removeWhere(
+            (e) => (e['name'] ?? docId) == lessonName
+          );
+          await prefs.setString(key, json.encode(customList));
+        }
+        
+        // Try to delete from Firestore if online, otherwise add to pending
+        if (_isConnected) {
+          try {
+            await FirebaseFirestore.instance
+              .collection('custom_lessons')
+              .doc(docId)
+              .delete();
+            print('[CustomLessons] Deleted from Firestore: $docId');
+          } catch (e) {
+            print('[CustomLessons] Error deleting from Firestore: $e');
+            // Add to pending deletions
+            final pendingDeletes = prefs.getStringList('pending_custom_lesson_deletes') ?? [];
+            if (!pendingDeletes.contains(docId)) {
+              pendingDeletes.add(docId);
+              await prefs.setStringList('pending_custom_lesson_deletes', pendingDeletes);
+            }
+          }
+        } else {
+          // Offline - add to pending deletions
+          print('[CustomLessons] Offline - adding to pending deletions: $docId');
+          final pendingDeletes = prefs.getStringList('pending_custom_lesson_deletes') ?? [];
+          if (!pendingDeletes.contains(docId)) {
+            pendingDeletes.add(docId);
+            await prefs.setStringList('pending_custom_lesson_deletes', pendingDeletes);
+          }
+        }
+        
+        // Refresh the UI
+        if (mounted) {
+          setState(() {});
+          
+          final l10n = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Text(l10n?.lessonDeleted ?? 'Lesson deleted'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+          );
+        }
+      } catch (e) {
+        print('[CustomLessons] Error deleting lesson: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Text('Error: $e'),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     }
   }

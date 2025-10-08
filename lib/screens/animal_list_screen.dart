@@ -12,6 +12,9 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'package:myapp/widgets/language_toggle.dart';
+import 'package:myapp/services/language_service.dart';
+import 'package:myapp/l10n/app_localizations.dart';
 
 class AnimalListScreen extends StatefulWidget {
   final String collectionName;
@@ -34,6 +37,10 @@ class _AnimalListScreenState extends State<AnimalListScreen>
   Future<List<Map<String, dynamic>>>? _offlineData;
   bool _isConnected = true;
   StreamSubscription<dynamic>? _connectivitySubscription;
+  
+  // Edit mode functionality
+  bool _isEditMode = false;
+  final String _editPassword = 'chicha';
 
   @override
   void initState() {
@@ -65,6 +72,8 @@ class _AnimalListScreenState extends State<AnimalListScreen>
   void dispose() {
     _animationController?.dispose();
     _connectivitySubscription?.cancel();
+    // Cancel any pending operations
+    _offlineData = null;
     super.dispose();
   }
 
@@ -78,11 +87,287 @@ class _AnimalListScreenState extends State<AnimalListScreen>
     return [];
   }
 
+  void _showEditModeDialog() {
+    final passwordController = TextEditingController();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.security_rounded,
+                color: AppTheme.primaryColor,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              AnimatedBuilder(
+                animation: LanguageService(),
+                builder: (context, child) {
+                  final l10n = AppLocalizations.of(context);
+                  return Text(
+                    l10n?.editModeTitle ?? 'Modo de Edición',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedBuilder(
+                animation: LanguageService(),
+                builder: (context, child) {
+                  final l10n = AppLocalizations.of(context);
+                  return Text(
+                    l10n?.enterPasswordEdit ?? 'Ingresa la contraseña para activar el modo de edición:',
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                ),
+                onSubmitted: (value) {
+                  if (value == _editPassword) {
+                    setState(() {
+                      _isEditMode = true;
+                    });
+                    Navigator.pop(context);
+                    final l10n = AppLocalizations.of(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n?.editModeActivated ?? 'Edit mode activated'),
+                        backgroundColor: AppTheme.successColor,
+                      ),
+                    );
+                  } else {
+                    final l10n = AppLocalizations.of(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n?.incorrectPassword ?? 'Incorrect password'),
+                        backgroundColor: AppTheme.errorColor,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                AppLocalizations.of(context)?.cancel ?? 'Cancel',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (passwordController.text == _editPassword) {
+                  setState(() {
+                    _isEditMode = true;
+                  });
+                  Navigator.pop(context);
+                  final l10n = AppLocalizations.of(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n?.editModeActivated ?? 'Edit mode activated'),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
+                } else {
+                  final l10n = AppLocalizations.of(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n?.incorrectPassword ?? 'Incorrect password'),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white, // Explicitly set text color to white
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Activar',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditDialog(Map<String, dynamic> animalData) {
+    final nameController = TextEditingController(text: animalData['mainName'] ?? '');
+    final achuarController = TextEditingController(text: animalData['achuar'] ?? '');
+    final spanishController = TextEditingController(text: animalData['spanish'] ?? '');
+    final englishController = TextEditingController(text: animalData['english'] ?? '');
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.edit_outlined,
+                color: AppTheme.accentColor,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Editar Animal',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre Principal',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: achuarController,
+                  decoration: const InputDecoration(
+                    labelText: 'Achuar',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: spanishController,
+                  decoration: const InputDecoration(
+                    labelText: 'Español',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: englishController,
+                  decoration: const InputDecoration(
+                    labelText: 'English',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                AppLocalizations.of(context)?.cancel ?? 'Cancel',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final editedData = {
+                  'mainName': nameController.text,
+                  'achuar': achuarController.text,
+                  'spanish': spanishController.text,
+                  'english': englishController.text,
+                };
+
+                try {
+                  await _firestore
+                      .collection(widget.collectionName)
+                      .doc(animalData['id'])
+                      .update(editedData);
+                  Navigator.pop(context);
+                  final l10n = AppLocalizations.of(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n?.animalUpdatedSuccessfully ?? 'Animal updated successfully'),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
+                } catch (e) {
+                  final l10n = AppLocalizations.of(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${l10n?.errorSaving ?? 'Error saving'}: $e'),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Guardar',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _offlineData,
       builder: (context, offlineSnapshot) {
+        if (!mounted) return const SizedBox.shrink();
         if (offlineSnapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
             appBar: AppBar(title: Text(widget.title)),
@@ -106,6 +391,7 @@ class _AnimalListScreenState extends State<AnimalListScreen>
           .orderBy('mainName')
           .snapshots(includeMetadataChanges: true),
       builder: (context, snapshot) {
+        if (!mounted) return const SizedBox.shrink();
         if (snapshot.hasError) {
           return Scaffold(
             appBar: AppBar(title: Text(widget.title)),
@@ -176,6 +462,43 @@ class _AnimalListScreenState extends State<AnimalListScreen>
           elevation: 0,
           backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
           actions: [
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: TextButton.icon(
+                onPressed: () {
+                  if (_isEditMode) {
+                    setState(() {
+                      _isEditMode = false;
+                    });
+                  } else {
+                    _showEditModeDialog();
+                  }
+                },
+                icon: Icon(
+                  _isEditMode ? Icons.edit_off : Icons.edit,
+                  size: 18,
+                ),
+                label: Text(
+                  'Editar',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: _isEditMode 
+                      ? Colors.white
+                      : (isDarkMode ? Colors.grey[300] : Colors.grey[700]),
+                  backgroundColor: _isEditMode
+                      ? AppTheme.primaryColor
+                      : (isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[200]),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.search_rounded),
               onPressed: () {
@@ -272,6 +595,8 @@ class _AnimalListScreenState extends State<AnimalListScreen>
                             animalData: letterAnimals[index],
                             collectionName: widget.collectionName,
                             docId: letterAnimals[index]['id'] ?? '',
+                            isEditMode: _isEditMode,
+                            onEdit: _showEditDialog,
                           ),
                         );
                       },
@@ -452,6 +777,8 @@ class AnimalSearchDelegate extends SearchDelegate {
               animalData: searchResults[index],
               collectionName: collectionName,
               docId: searchResults[index]['id'],
+              isEditMode: false, // Edit mode not available in search
+              onEdit: null,
             ),
           );
         },
@@ -469,12 +796,16 @@ class AnimalCard extends StatefulWidget {
   final Map<String, dynamic> animalData;
   final String collectionName;
   final String docId;
+  final bool isEditMode;
+  final Function(Map<String, dynamic>)? onEdit;
 
   const AnimalCard({
     super.key,
     required this.animalData,
     required this.collectionName,
     required this.docId,
+    required this.isEditMode,
+    this.onEdit,
   });
 
   @override
@@ -487,26 +818,36 @@ class _AnimalCardState extends State<AnimalCard> {
   bool _isPlayingAudio = false;
   bool _hasPendingEdit = false;
 
+  StreamSubscription<dynamic>? _connectivitySubscription;
+
   @override
   void initState() {
     super.initState();
     _checkPendingEdit();
-    Connectivity().onConnectivityChanged.listen((result) {
-      if (result != ConnectivityResult.none) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
+      if (result != ConnectivityResult.none && mounted) {
         _syncPendingAnimalEdits();
       }
     });
   }
 
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _checkPendingEdit() async {
     final prefs = await SharedPreferences.getInstance();
     final pending = prefs.getStringList('pendingAnimalEdits') ?? [];
-    setState(() {
-      _hasPendingEdit = pending.any((e) {
-        final map = jsonDecode(e) as Map<String, dynamic>;
-        return map['docId'] == widget.docId && map['collectionName'] == widget.collectionName;
+    if (mounted) {
+      setState(() {
+        _hasPendingEdit = pending.any((e) {
+          final map = jsonDecode(e) as Map<String, dynamic>;
+          return map['docId'] == widget.docId && map['collectionName'] == widget.collectionName;
+        });
       });
-    });
+    }
   }
 
   Future<bool> _isOffline() async {
@@ -555,10 +896,10 @@ class _AnimalCardState extends State<AnimalCard> {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.sync, color: Colors.orange, size: 16),
-                        SizedBox(width: 6),
-                        Text('Edit pending sync', style: TextStyle(color: Colors.orange, fontSize: 12)),
+                      children: [
+                        const Icon(Icons.sync, color: Colors.orange, size: 16),
+                        const SizedBox(width: 6),
+                        Text(AppLocalizations.of(context)?.editPendingSync ?? 'Edit pending sync', style: const TextStyle(color: Colors.orange, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -598,21 +939,23 @@ class _AnimalCardState extends State<AnimalCard> {
                         ),
                         const SizedBox(width: 8),
                       ],
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                      if (widget.isEditMode && widget.onEdit != null) ...[
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.edit_rounded, size: 18),
+                            color: AppTheme.accentColor,
+                            padding: EdgeInsets.zero,
+                            tooltip: 'Editar',
+                            onPressed: () => widget.onEdit!(widget.animalData),
+                          ),
                         ),
-                        child: IconButton(
-                          icon: const Icon(Icons.edit_rounded, size: 18),
-                          color: Colors.orange,
-                          padding: EdgeInsets.zero,
-                          tooltip: 'Editar',
-                          onPressed: () => _showEditDialog(context, widget.docId, widget.animalData),
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ],
@@ -663,29 +1006,19 @@ class _AnimalCardState extends State<AnimalCard> {
                                   : Colors.blue,
                               padding: EdgeInsets.zero,
                               onPressed: () async {
+                                if (!mounted) return;
                                 setState(() {
                                   _isPlayingAudio = true;
                                 });
                                 bool playedLocal = false;
-                                if ((widget.collectionName.contains('mammal') || widget.collectionName.contains('bird')) && englishName.isNotEmpty && englishName != 'N/A') {
-                                  final assetPath = 'assets/audio/animal-audio/${englishName.toLowerCase()}.mp3';
-                                  try {
-                                    // Try to play the asset audio
-                                    final player = AudioPlayer();
-                                    await player.play(AssetSource('audio/animal-audio/${englishName.toLowerCase()}.mp3'));
-                                    playedLocal = true;
-                                    await player.onPlayerComplete.first;
-                                  } catch (e) {
-                                    // If asset not found or error, fallback to TTS
-                                    playedLocal = false;
-                                  }
+                                if (englishName.isNotEmpty && englishName != 'N/A') {
+                                  await playEnglishTTS(englishName, checkAnimalAudio: true);
                                 }
-                                if (!playedLocal) {
-                                  await playEnglishTTS(englishName);
+                                if (mounted) {
+                                  setState(() {
+                                    _isPlayingAudio = false;
+                                  });
                                 }
-                                setState(() {
-                                  _isPlayingAudio = false;
-                                });
                               },
                               tooltip: 'Play English audio',
                             ),
@@ -831,6 +1164,7 @@ class _AnimalCardState extends State<AnimalCard> {
                       : FutureBuilder<String>(
                           future: _getImageUrl(imageName),
                           builder: (context, snapshot) {
+                            if (!mounted) return const SizedBox.shrink();
                             if (snapshot.connectionState == ConnectionState.waiting) {
                               return const SizedBox(
                                 height: 200,
@@ -946,7 +1280,7 @@ class _AnimalCardState extends State<AnimalCard> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                'Cancelar',
+                AppLocalizations.of(context)?.cancel ?? 'Cancel',
                 style: TextStyle(
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 ),
@@ -954,29 +1288,41 @@ class _AnimalCardState extends State<AnimalCard> {
             ),
             ElevatedButton(
               onPressed: () async {
+                // Close dialog immediately
+                Navigator.of(context).pop();
+                
+                // Update animal in background
                 await _updateAnimal(
                   docId,
                   mainNameController.text,
                   englishNameController.text,
                   spanishNameController.text,
                 );
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Row(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.white),
-                        SizedBox(width: 12),
-                        Text('Cambios guardados exitosamente'),
-                      ],
-                    ),
-                    backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                );
+                
+                // Show success message
+                if (mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      final l10n = AppLocalizations.of(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.check_circle, color: Colors.white),
+                              const SizedBox(width: 12),
+                              Text(l10n?.changesSavedSuccessfully ?? 'Changes saved successfully'),
+                            ],
+                          ),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    }
+                  });
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
@@ -1008,11 +1354,6 @@ class _AnimalCardState extends State<AnimalCard> {
         labelText: label,
         labelStyle: TextStyle(
           color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-        ),
-        prefixIcon: Icon(
-          icon,
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          size: 20,
         ),
         filled: true,
         fillColor: isDarkMode
@@ -1070,7 +1411,9 @@ class _AnimalCardState extends State<AnimalCard> {
         }
         await prefs.setString(offlineKey, jsonEncode(offlineList));
       }
-      setState(() { _hasPendingEdit = true; });
+      if (mounted) {
+        setState(() { _hasPendingEdit = true; });
+      }
     } else {
       // Online: update Firestore
       await _firestore.collection(widget.collectionName).doc(docId).update({
@@ -1078,7 +1421,9 @@ class _AnimalCardState extends State<AnimalCard> {
         'englishName': englishName,
         'spanishName': spanishName,
       });
-      setState(() { _hasPendingEdit = false; });
+      if (mounted) {
+        setState(() { _hasPendingEdit = false; });
+      }
     }
   }
 

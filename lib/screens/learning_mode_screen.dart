@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:myapp/l10n/app_localizations.dart';
 
 class LearningModeScreen extends StatefulWidget {
   final List<LearningQuestion> questions;
@@ -184,8 +185,6 @@ class _LearningModeScreenState extends State<LearningModeScreen>
         return _buildAudioMultipleChoice(question);
       case QuestionType.sentenceOrder:
         return _buildSentenceOrder(question);
-      default:
-        return const Text('Error: Tipo de pregunta no válido');
     }
   }
 
@@ -204,27 +203,28 @@ class _LearningModeScreenState extends State<LearningModeScreen>
           end: Offset.zero,
         ).animate(_animationController),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Prompt container - reduced padding
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 color: isDarkMode
                     ? Colors.white.withOpacity(0.05)
                     : const Color(0xFF6B5B95).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
                 prompt,
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 20, // Reduced from 24
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.black87,
                 ),
                 textAlign: TextAlign.center,
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 20), // Reduced from 40
+            // Options - reduced spacing
             ...options.asMap().entries.map((entry) {
               int idx = entry.key;
               String optionText = entry.value;
@@ -255,7 +255,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                 textColor = isDarkMode ? Colors.white : Colors.black87;
               }
               return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                padding: const EdgeInsets.symmetric(vertical: 6.0), // Reduced from 8
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   transform: Matrix4.identity()
@@ -269,8 +269,8 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 20,
+                          horizontal: 20, // Reduced from 24
+                          vertical: 16, // Reduced from 20
                         ),
                         child: Row(
                           children: [
@@ -278,14 +278,14 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                               child: Text(
                                 optionText,
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 15, // Reduced from 16
                                   fontWeight: FontWeight.w500,
                                   color: textColor,
                                 ),
                               ),
                             ),
                             if (icon != null)
-                              Icon(icon, color: textColor, size: 24),
+                              Icon(icon, color: textColor, size: 22), // Reduced from 24
                           ],
                         ),
                       ),
@@ -294,14 +294,14 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                 ),
               );
             }).toList(),
-            const SizedBox(height: 40),
+            const SizedBox(height: 20), // Reduced from 40
             if (_answered) ...[
               ScaleTransition(
                 scale: _scaleAnimation,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
+                    horizontal: 20, // Reduced from 24
+                    vertical: 12, // Reduced from 16
                   ),
                   decoration: BoxDecoration(
                     color: (isCorrect ? Colors.green : Colors.red).withOpacity(0.1),
@@ -321,13 +321,15 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                                 ? Icons.celebration_rounded
                                 : Icons.lightbulb_rounded,
                             color: isCorrect ? Colors.green : Colors.red,
-                            size: 28,
+                            size: 24, // Reduced from 28
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10), // Reduced from 12
                           Text(
-                            isCorrect ? "¡Correcto!" : "¡Incorrecto!",
+                            isCorrect 
+                              ? (AppLocalizations.of(context)?.correctExclamation ?? '¡Correcto!') 
+                              : (AppLocalizations.of(context)?.incorrectExclamation ?? '¡Incorrecto!'),
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 18, // Reduced from 20
                               fontWeight: FontWeight.bold,
                               color: isCorrect ? Colors.green : Colors.red,
                             ),
@@ -335,11 +337,11 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                         ],
                       ),
                       if (!isCorrect) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8), // Reduced from 12
                         Text(
-                          "La respuesta correcta es:",
+                          AppLocalizations.of(context)?.correctAnswerIs ?? 'La respuesta correcta es:',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13, // Reduced from 14
                             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                           ),
                         ),
@@ -347,7 +349,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                         Text(
                           correctAnswer,
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 15, // Reduced from 16
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -356,16 +358,16 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16), // Reduced from 24
               ElevatedButton.icon(
                 onPressed: _nextQuestion,
                 icon: const Icon(Icons.arrow_forward_rounded),
                 label: Text(
                   _currentIndex < widget.questions.length - 1
-                      ? 'Siguiente'
-                      : 'Finalizar',
+                      ? (AppLocalizations.of(context)?.next ?? 'Siguiente')
+                      : (AppLocalizations.of(context)?.finish ?? 'Finalizar'),
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15, // Reduced from 16
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -373,8 +375,8 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                   backgroundColor: const Color(0xFF82B366),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+                    horizontal: 28, // Reduced from 32
+                    vertical: 14, // Reduced from 16
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -398,15 +400,14 @@ class _LearningModeScreenState extends State<LearningModeScreen>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Reduced padding
             decoration: BoxDecoration(
               color: isDarkMode
                   ? Colors.white.withOpacity(0.05)
                   : Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16), // Reduced from 20
             ),
             child: Column(
               children: [
@@ -427,6 +428,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                     final file = File(filePath);
                     if (await file.exists()) {
                       final player = AudioPlayer();
+                      await player.setVolume(1.0); // Set volume to maximum
                       await player.play(DeviceFileSource(file.path));
                       return;
                     }
@@ -434,8 +436,9 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                     final connectivity = await Connectivity().checkConnectivity();
                     if (connectivity == ConnectivityResult.none) {
                       if (mounted) {
+                        final l10n = AppLocalizations.of(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Sin conexión. Descargue el audio para usarlo sin conexión.')),
+                          SnackBar(content: Text(l10n?.noConnectionDownloadAudio ?? 'No connection. Download audio for offline use.')),
                         );
                       }
                       return;
@@ -444,11 +447,11 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                     await playEnglishTTS(question.correctEntry.english, context: context);
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12), // Reduced from 16
                 Text(
-                  "Escucha y selecciona la palabra correcta",
+                  AppLocalizations.of(context)?.listenAndSelect ?? 'Escucha y selecciona la palabra correcta',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16, // Reduced from 18
                     fontWeight: FontWeight.w600,
                     color: isDarkMode ? Colors.white : Colors.black87,
                   ),
@@ -457,7 +460,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 20), // Reduced from 32
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -488,6 +491,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                   final file = File(filePath);
                   if (await file.exists()) {
                     final player = AudioPlayer();
+                    await player.setVolume(1.0); // Set volume to maximum
                     await player.play(DeviceFileSource(file.path));
                   } else {
                     await playEnglishTTS(question.correctEntry.english, context: context);
@@ -495,21 +499,21 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                 },
                 customBorder: const CircleBorder(),
                 child: Container(
-                  width: 100,
-                  height: 100,
+                  width: 80, // Reduced from 100
+                  height: 80, // Reduced from 100
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.volume_up_rounded,
-                    size: 48,
+                    size: 40, // Reduced from 48
                     color: Colors.white,
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 20), // Reduced from 40
           ...options.asMap().entries.map((entry) {
             int idx = entry.key;
             String optionText = entry.value;
@@ -540,7 +544,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               textColor = isDarkMode ? Colors.white : Colors.black87;
             }
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: const EdgeInsets.symmetric(vertical: 6.0), // Reduced from 8
               child: Material(
                 elevation: _answered ? 0 : (isDarkMode ? 2 : 4),
                 borderRadius: BorderRadius.circular(16),
@@ -550,8 +554,8 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 20,
+                      horizontal: 20, // Reduced from 24
+                      vertical: 16, // Reduced from 20
                     ),
                     child: Row(
                       children: [
@@ -559,14 +563,14 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                           child: Text(
                             optionText,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 15, // Reduced from 16
                               fontWeight: FontWeight.w500,
                               color: textColor,
                             ),
                           ),
                         ),
                         if (icon != null)
-                          Icon(icon, color: textColor, size: 24),
+                          Icon(icon, color: textColor, size: 22), // Reduced from 24
                       ],
                     ),
                   ),
@@ -574,10 +578,10 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               ),
             );
           }).toList(),
-          const SizedBox(height: 40),
+          const SizedBox(height: 20), // Reduced from 40
           if (_answered) ...[
             _buildFeedback(isCorrect, correctAnswer, isDarkMode),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16), // Reduced from 24
             _buildNextButton(),
           ],
         ],
@@ -592,28 +596,27 @@ class _LearningModeScreenState extends State<LearningModeScreen>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Reduced padding
             decoration: BoxDecoration(
               color: isDarkMode
                   ? Colors.white.withOpacity(0.05)
                   : const Color(0xFF88B0D3).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16), // Reduced from 20
             ),
             child: Column(
               children: [
                 Icon(
                   Icons.keyboard_rounded,
-                  size: 48,
+                  size: 40, // Reduced from 48
                   color: const Color(0xFF88B0D3),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12), // Reduced from 16
                 Text(
                   prompt,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 20, // Reduced from 24
                     fontWeight: FontWeight.bold,
                     color: isDarkMode ? Colors.white : Colors.black87,
                   ),
@@ -622,16 +625,16 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 20), // Reduced from 40
           TextField(
             controller: _textController,
             enabled: !_answered,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 15, // Reduced from 16
               color: isDarkMode ? Colors.white : Colors.black87,
             ),
             decoration: InputDecoration(
-              hintText: 'Escribe la traducción aquí...',
+              hintText: AppLocalizations.of(context)?.writeTranslationHere ?? 'Escribe la traducción aquí...',
               hintStyle: TextStyle(
                 color: isDarkMode ? Colors.grey[600] : Colors.grey[500],
               ),
@@ -639,7 +642,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               fillColor: isDarkMode
                   ? const Color(0xFF1E1E1E)
                   : Colors.white,
-              contentPadding: const EdgeInsets.all(20),
+              contentPadding: const EdgeInsets.all(16), // Reduced from 20
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -660,15 +663,15 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16), // Reduced from 24
           if (!_answered)
             ElevatedButton.icon(
               onPressed: () => _checkAnswer(_textController.text),
               icon: const Icon(Icons.check_rounded),
-              label: const Text(
-                'Enviar',
-                style: TextStyle(
-                  fontSize: 16,
+              label: Text(
+                AppLocalizations.of(context)?.submit ?? 'Enviar',
+                style: const TextStyle(
+                  fontSize: 15, // Reduced from 16
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -676,8 +679,8 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                 backgroundColor: const Color(0xFF88B0D3),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+                  horizontal: 28, // Reduced from 32
+                  vertical: 14, // Reduced from 16
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -685,10 +688,10 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                 elevation: 0,
               ),
             ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 20), // Reduced from 40
           if (_answered) ...[
             _buildFeedback(isCorrect, correctAnswer, isDarkMode),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16), // Reduced from 24
             _buildNextButton(),
           ],
         ],
@@ -713,38 +716,37 @@ class _LearningModeScreenState extends State<LearningModeScreen>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Reduced padding
             decoration: BoxDecoration(
               color: isDarkMode
                   ? Colors.white.withOpacity(0.05)
                   : Colors.purple.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16), // Reduced from 20
             ),
             child: Column(
               children: [
                 Icon(
                   Icons.sort_rounded,
-                  size: 48,
+                  size: 40, // Reduced from 48
                   color: Colors.purple[700],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12), // Reduced from 16
                 Text(
                   prompt,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 20, // Reduced from 24
                     fontWeight: FontWeight.bold,
                     color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8), // Reduced from 12
                 Text(
-                  'Ordena las palabras para formar la frase correcta',
+                  AppLocalizations.of(context)?.arrangeWordsPhrase ?? 'Ordena las palabras para formar la frase correcta',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13, // Reduced from 14
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                   ),
                   textAlign: TextAlign.center,
@@ -752,12 +754,12 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16), // Reduced from 32
           // Selected words area
           Container(
             width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 80),
-            padding: const EdgeInsets.all(16),
+            constraints: const BoxConstraints(minHeight: 60), // Reduced from 80
+            padding: const EdgeInsets.all(12), // Reduced from 16
             decoration: BoxDecoration(
               color: isDarkMode
                   ? Colors.white.withOpacity(0.05)
@@ -773,8 +775,9 @@ class _LearningModeScreenState extends State<LearningModeScreen>
             child: selectedWords.isEmpty
                 ? Center(
                     child: Text(
-                      'Toca las palabras abajo para construir la frase',
+                      AppLocalizations.of(context)?.tapWordsToBuild ?? 'Toca las palabras abajo para construir la frase',
                       style: TextStyle(
+                        fontSize: 13, // Reduced size
                         color: isDarkMode
                             ? Colors.grey[600]
                             : Colors.grey[500],
@@ -783,8 +786,8 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                     ),
                   )
                 : Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: 6, // Reduced from 8
+                    runSpacing: 6, // Reduced from 8
                     children: selectedWords.map((word) {
                       return Material(
                         elevation: 2,
@@ -803,8 +806,8 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
+                              horizontal: 12, // Reduced from 16
+                              vertical: 8, // Reduced from 12
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -812,17 +815,17 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                                 Text(
                                   word,
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14, // Reduced from 16
                                     fontWeight: FontWeight.w500,
                                     color: isDarkMode
                                         ? Colors.white
                                         : Colors.black87,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 6), // Reduced from 8
                                 Icon(
                                   Icons.close_rounded,
-                                  size: 18,
+                                  size: 16, // Reduced from 18
                                   color: isDarkMode
                                       ? Colors.grey[600]
                                       : Colors.grey[500],
@@ -835,11 +838,11 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                     }).toList(),
                   ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16), // Reduced from 24
           // Available words
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 6, // Reduced from 8
+            runSpacing: 6, // Reduced from 8
             children: availableWords
                 .where((w) => !selectedWords.contains(w))
                 .map((word) {
@@ -858,13 +861,13 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
+                      horizontal: 16, // Reduced from 20
+                      vertical: 10, // Reduced from 14
                     ),
                     child: Text(
                       word,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 14, // Reduced from 16
                         fontWeight: FontWeight.w500,
                         color: Colors.white,
                       ),
@@ -874,7 +877,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               );
             }).toList(),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16), // Reduced from 32
           if (!_answered && selectedWords.isNotEmpty)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -885,24 +888,25 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                       selectedWords.clear();
                     });
                   },
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Reiniciar'),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(AppLocalizations.of(context)?.restart ?? 'Reiniciar', style: const TextStyle(fontSize: 13)),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.grey[600],
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12), // Reduced from 16
                 if (selectedWords.length == correctWords.length)
                   ElevatedButton.icon(
                     onPressed: () {
                       final userAnswer = selectedWords.join(' ').trim().toLowerCase();
                       _checkAnswer(userAnswer);
                     },
-                    icon: const Icon(Icons.check_rounded),
-                    label: const Text('Comprobar'),
+                    icon: const Icon(Icons.check_rounded, size: 18),
+                    label: Text(AppLocalizations.of(context)?.check ?? 'Check', style: const TextStyle(fontSize: 13)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.purple,
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -916,7 +920,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               correctWords.join(' '),
               isDarkMode,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16), // Reduced from 24
             _buildNextButton(),
           ],
         ],
@@ -929,8 +933,8 @@ class _LearningModeScreenState extends State<LearningModeScreen>
       scale: _scaleAnimation,
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: 24,
-          vertical: 16,
+          horizontal: 20, // Reduced from 24
+          vertical: 12, // Reduced from 16
         ),
         decoration: BoxDecoration(
           color: (isCorrect ? Colors.green : Colors.red).withOpacity(0.1),
@@ -950,13 +954,15 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                       ? Icons.celebration_rounded
                       : Icons.lightbulb_rounded,
                   color: isCorrect ? Colors.green : Colors.red,
-                  size: 28,
+                  size: 24, // Reduced from 28
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10), // Reduced from 12
                 Text(
-                  isCorrect ? "¡Correcto!" : "¡Incorrecto!",
+                  isCorrect 
+                    ? (AppLocalizations.of(context)?.correctExclamation ?? '¡Correcto!') 
+                    : (AppLocalizations.of(context)?.incorrectExclamation ?? '¡Incorrecto!'),
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18, // Reduced from 20
                     fontWeight: FontWeight.bold,
                     color: isCorrect ? Colors.green : Colors.red,
                   ),
@@ -964,11 +970,11 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               ],
             ),
             if (!isCorrect) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8), // Reduced from 12
               Text(
-                "La respuesta correcta es:",
+                AppLocalizations.of(context)?.correctAnswerIs ?? 'La respuesta correcta es:',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13, // Reduced from 14
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 ),
               ),
@@ -976,7 +982,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               Text(
                 correctAnswer,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 15, // Reduced from 16
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -990,13 +996,13 @@ class _LearningModeScreenState extends State<LearningModeScreen>
   Widget _buildNextButton() {
     return ElevatedButton.icon(
       onPressed: _nextQuestion,
-      icon: const Icon(Icons.arrow_forward_rounded),
+      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
       label: Text(
         _currentIndex < widget.questions.length - 1
-            ? 'Siguiente'
-            : 'Finalizar',
+            ? (AppLocalizations.of(context)?.next ?? 'Siguiente')
+            : (AppLocalizations.of(context)?.finish ?? 'Finalizar'),
         style: const TextStyle(
-          fontSize: 16,
+          fontSize: 15, // Reduced from 16
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -1004,8 +1010,8 @@ class _LearningModeScreenState extends State<LearningModeScreen>
         backgroundColor: const Color(0xFF82B366),
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(
-          horizontal: 32,
-          vertical: 16,
+          horizontal: 28, // Reduced from 32
+          vertical: 14, // Reduced from 16
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1023,9 +1029,9 @@ class _LearningModeScreenState extends State<LearningModeScreen>
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text(
-          'Modo de Aprendizaje',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Text(
+          AppLocalizations.of(context)?.learningMode ?? 'Modo de Aprendizaje',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18), // Reduced font size
         ),
         elevation: 0,
         backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
@@ -1039,8 +1045,8 @@ class _LearningModeScreenState extends State<LearningModeScreen>
             child: Center(
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+                  horizontal: 10, // Reduced from 12
+                  vertical: 5, // Reduced from 6
                 ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF82B366).withOpacity(0.1),
@@ -1050,14 +1056,15 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                   children: [
                     Icon(
                       Icons.flag_rounded,
-                      size: 16,
+                      size: 14, // Reduced from 16
                       color: const Color(0xFF82B366),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4), // Reduced from 6
                     Text(
                       '${_currentIndex + 1}/${widget.questions.length}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
+                        fontSize: 13, // Reduced size
                         color: Color(0xFF82B366),
                       ),
                     ),
@@ -1075,7 +1082,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
             animation: _progressAnimationController,
             builder: (context, child) {
               return Container(
-                height: 8,
+                height: 6, // Reduced from 8
                 decoration: BoxDecoration(
                   color: isDarkMode
                       ? Colors.white.withOpacity(0.1)
@@ -1101,18 +1108,37 @@ class _LearningModeScreenState extends State<LearningModeScreen>
               );
             },
           ),
-          // Question content
+          // Question content - Use Expanded with proper constraints
           Expanded(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: _buildQuestionWidget(widget.questions[_currentIndex]),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Reduced padding
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: _buildQuestionWidget(widget.questions[_currentIndex]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-          // Navigation
+          // Navigation - Made more compact
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Reduced padding
             decoration: BoxDecoration(
               color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
               boxShadow: [
@@ -1136,7 +1162,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_rounded),
+                      icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
                       onPressed: _currentIndex > 0 ? _previousQuestion : null,
                       color: _currentIndex > 0
                           ? (isDarkMode ? Colors.white : Colors.black87)
@@ -1147,17 +1173,17 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Pregunta ${_currentIndex + 1} de ${widget.questions.length}',
+                        '${AppLocalizations.of(context)?.question ?? 'Pregunta'} ${_currentIndex + 1} ${AppLocalizations.of(context)?.ofPreposition ?? 'de'} ${widget.questions.length}',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12, // Reduced from 14
                           fontWeight: FontWeight.w600,
                           color: isDarkMode ? Colors.white : Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        width: 120,
-                        height: 4,
+                        width: 100, // Reduced from 120
+                        height: 3, // Reduced from 4
                         decoration: BoxDecoration(
                           color: isDarkMode
                               ? Colors.white.withOpacity(0.1)
@@ -1185,7 +1211,7 @@ class _LearningModeScreenState extends State<LearningModeScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_forward_ios_rounded),
+                      icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
                       onPressed: _currentIndex < widget.questions.length - 1
                           ? _nextQuestion
                           : null,

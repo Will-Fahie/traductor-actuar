@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:async';
+import 'package:myapp/l10n/app_localizations.dart';
 
 class LevelScreen extends StatefulWidget {
   final Level level;
@@ -295,10 +296,11 @@ class _LevelScreenState extends State<LevelScreen> {
                                 child: InkWell(
                                   onTap: isOffline || isDownloading || isDownloaded ? null : () async {
                                     if (!mounted) return;
+                                    final l10n = AppLocalizations.of(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Por favor, no abandone esta página mientras se descarga.'),
-                                        duration: Duration(seconds: 3),
+                                      SnackBar(
+                                        content: Text(l10n?.doNotLeaveWhileDownloading ?? 'Please do not leave this page while downloading.'),
+                                        duration: const Duration(seconds: 3),
                                       ),
                                     );
                                     setState(() {
@@ -389,24 +391,10 @@ class _LevelScreenState extends State<LevelScreen> {
                                         width: 1,
                                       ),
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          isDownloaded ? Icons.check_circle_rounded : Icons.download_rounded,
-                                          size: 18,
-                                          color: isOffline ? Colors.grey : Colors.blue,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          isDownloaded ? 'Descargado' : 'Descargar',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: isOffline ? Colors.grey : Colors.blue,
-                                          ),
-                                        ),
-                                      ],
+                                    child: Icon(
+                                      isDownloaded ? Icons.check_circle_rounded : Icons.download_rounded,
+                                      size: 18,
+                                      color: isOffline ? Colors.grey : Colors.blue,
                                     ),
                                   ),
                                 ),
