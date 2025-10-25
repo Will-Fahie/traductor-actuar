@@ -170,13 +170,20 @@ class _CreateCustomLessonScreenState extends State<CreateCustomLessonScreen> {
   }
 
   // Post-processing for translation output
-  String _postprocessTranslation(String translation) {
+  String _postprocessTranslation(String translation, {String? sourceText}) {
     if (translation.isEmpty) return translation;
     
     String processed = translation.trim();
     
+    // Check if the original source was a question
+    final isQuestion = sourceText?.trim().endsWith('?') ?? false;
+    
     // Remove extra whitespace
     processed = processed.replaceAll(RegExp(r'\s+'), ' ');
+    
+    // Remove regex backreference artifacts like $1, $2, $ 1, $ 2, etc. (with or without spaces)
+    processed = processed.replaceAll(RegExp(r'\$\s*\d+'), '');
+    processed = processed.replaceAll(RegExp(r'\s+'), ' '); // Clean up extra spaces again
     
     // Remove any remaining context phrases (comprehensive cleanup)
     processed = processed.replaceAll(RegExp(r'^(Translate\s+(to|into)\s+English:\s*|Traducir\s+al\s+inglés:\s*)', caseSensitive: false), '');
@@ -188,9 +195,15 @@ class _CreateCustomLessonScreenState extends State<CreateCustomLessonScreen> {
       processed = processed[0].toUpperCase() + processed.substring(1);
     }
     
-    // Clean up common translation artifacts
-    processed = processed.replaceAll(RegExp(r'^(The\s+)?'), '');
-    processed = processed.replaceAll(RegExp(r'\s*\.$'), '');
+    // Clean up common translation artifacts - FIXED: use non-capturing group and only match if "The " exists
+    processed = processed.replaceAll(RegExp(r'^The\s+'), '');
+    // Remove any ending punctuation
+    processed = processed.replaceAll(RegExp(r'\s*[.!?]\s*$'), '');
+    
+    // If the original was a question, ensure the translation ends with a question mark
+    if (isQuestion && !processed.endsWith('?')) {
+      processed += '?';
+    }
     
     return processed;
   }
@@ -249,7 +262,7 @@ class _CreateCustomLessonScreenState extends State<CreateCustomLessonScreen> {
       }
       
       // Post-process the translation
-      translated = _postprocessTranslation(translated);
+      translated = _postprocessTranslation(translated, sourceText: pair.spanish);
       
       setState(() { pair.english = translated; });
 
