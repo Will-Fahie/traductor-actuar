@@ -2026,30 +2026,45 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
         const SizedBox(height: AppTheme.spacingSmall),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withOpacity(0.5),
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-            border: Border.all(
-              color: theme.dividerTheme.color ?? AppTheme.dividerColor,
-              width: 1,
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: TextField(
             controller: controller,
-            readOnly: true,
             maxLines: 3,
             style: theme.textTheme.bodyLarge,
             decoration: InputDecoration(
               hintText: hintText ?? 'La traducción aparecerá aquí...',
               hintStyle: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.textTheme.bodySmall?.color,
-                fontStyle: FontStyle.italic,
               ),
               filled: true,
-              fillColor: Colors.transparent,
+              fillColor: theme.colorScheme.surface,
               contentPadding: const EdgeInsets.all(AppTheme.spacingMedium),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                 borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                borderSide: BorderSide(
+                  color: theme.dividerTheme.color ?? AppTheme.dividerColor,
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                borderSide: BorderSide(
+                  color: color,
+                  width: 2,
+                ),
               ),
             ),
           ),
