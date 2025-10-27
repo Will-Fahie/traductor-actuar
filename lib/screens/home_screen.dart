@@ -109,10 +109,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 if (_isGuestMode) ...[
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppTheme.spacingMedium),
-                    child: InfoBanner(
-                      title: 'Modo Invitado',
-                      message: 'Aunque es posible crear lecciones personalizadas y listas en modo invitado, si te desconectas es probable que pierdas estos datos. Para guardar lecciones personalizadas, traducciones y listas, crea una cuenta.',
-                      type: InfoBannerType.warning,
+                    child: AnimatedBuilder(
+                      animation: LanguageService(),
+                      builder: (context, child) {
+                        final l10n = AppLocalizations.of(context);
+                        return InfoBanner(
+                          title: l10n?.guestMode ?? 'Modo Invitado',
+                          message: l10n?.guestModeWarning ?? 'Aunque es posible crear lecciones personalizadas y listas en modo invitado, si te desconectas es probable que pierdas estos datos. Para guardar lecciones personalizadas, traducciones y listas, crea una cuenta.',
+                          type: InfoBannerType.warning,
+                        );
+                      },
                     ),
                   ),
                 ],

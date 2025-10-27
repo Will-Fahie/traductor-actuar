@@ -26,6 +26,10 @@ class AppLocalizations {
       ? 'Explora las herramientas de traducción y recursos educativos.' 
       : 'Explore translation tools and educational resources.';
   String get logoutButton => locale.languageCode == 'es' ? 'Cerrar sesión' : 'Logout';
+  String get guestMode => locale.languageCode == 'es' ? 'Modo Invitado' : 'Guest Mode';
+  String get guestModeWarning => locale.languageCode == 'es' 
+      ? 'Aunque es posible crear lecciones personalizadas y listas en modo invitado, si te desconectas es probable que pierdas estos datos. Para guardar lecciones personalizadas, traducciones y listas, crea una cuenta.'
+      : 'While you can create custom lessons and lists in guest mode, you may lose this data if you disconnect. To save custom lessons, translations, and lists, create an account.';
 
   // Menu Items
   String get dictionary => locale.languageCode == 'es' ? 'Diccionario' : 'Dictionary';

@@ -72,7 +72,8 @@ class _CreateCustomLessonScreenState extends State<CreateCustomLessonScreen> {
           ..spanish = e['spanish'] ?? ''
           ..english = e['english'] ?? ''
           ..achuarController = TextEditingController(text: e['achuar'] ?? '')
-          ..spanishController = TextEditingController(text: e['spanish'] ?? '');
+          ..spanishController = TextEditingController(text: e['spanish'] ?? '')
+          ..englishController = TextEditingController(text: e['english'] ?? '');
         _pairs.add(pair);
       }
       if (_pairs.isEmpty) _pairs.add(_PhrasePair());
@@ -264,7 +265,13 @@ class _CreateCustomLessonScreenState extends State<CreateCustomLessonScreen> {
       // Post-process the translation
       translated = _postprocessTranslation(translated, sourceText: pair.spanish);
       
-      setState(() { pair.english = translated; });
+      setState(() { 
+        pair.english = translated;
+        // Update the controller if it exists
+        if (pair.englishController != null) {
+          pair.englishController!.text = translated;
+        }
+      });
 
       // Submit to achuar_submission collection
       final submission = {
@@ -625,24 +632,23 @@ class _CreateCustomLessonScreenState extends State<CreateCustomLessonScreen> {
                               children: [
                                 Text(AppLocalizations.of(context)?.englishAuto ?? 'English (auto)', style: const TextStyle(fontSize: 13, color: Colors.grey)),
                                 const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    color: isDarkMode ? const Color(0xFF232323) : Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    pair.english.isEmpty 
-                                      ? (AppLocalizations.of(context)?.translationAppearHere ?? 'Traducción aparecerá aquí...') 
-                                      : pair.english,
-                                    style: TextStyle(
-                                      color: pair.english.isEmpty 
-                                        ? Colors.grey 
-                                        : (isDarkMode ? Colors.white : Colors.black87),
-                                      fontSize: 16,
-                                      fontStyle: pair.english.isEmpty ? FontStyle.italic : FontStyle.normal,
+                                TextField(
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context)?.translationAppearHere ?? 'Traducción aparecerá aquí...',
+                                    filled: true,
+                                    fillColor: isDarkMode ? const Color(0xFF232323) : Colors.grey[100],
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey[400]!),
                                     ),
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                                   ),
+                                  controller: pair.englishController ??= TextEditingController(text: pair.english),
+                                  onChanged: (v) => pair.english = v,
+                                  style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 16),
+                                  maxLines: null,
+                                  minLines: 1,
                                 ),
                               ],
                             ),
@@ -815,4 +821,5 @@ class _PhrasePair {
   bool isTranslating = false;
   TextEditingController? achuarController;
   TextEditingController? spanishController;
+  TextEditingController? englishController;
 }

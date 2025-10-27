@@ -470,7 +470,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> with SingleTickerPr
     
     // Remove regex backreference artifacts like $1, $2, $ 1, $ 2, etc. (with or without spaces)
     processed = processed.replaceAll(RegExp(r'\$\s*\d+'), '');
-    processed = processed.replaceAll(RegExp(r'\s+'), ' '); // Clean up extra spaces againr
+    processed = processed.replaceAll(RegExp(r'\s+'), ' '); // Clean up extra spaces again
     
     // Remove any remaining context phrases (comprehensive cleanup)
     processed = processed.replaceAll(RegExp(r'^(Translate\s+(to|into)\s+English:\s*|Traducir\s+al\s+inglés:\s*)', caseSensitive: false), '');
