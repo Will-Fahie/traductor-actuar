@@ -630,17 +630,21 @@ class _CreateCustomLessonScreenState extends State<CreateCustomLessonScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(AppLocalizations.of(context)?.englishAuto ?? 'English (auto)', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                                Text(AppLocalizations.of(context)?.englishEditable ?? 'English', style: const TextStyle(fontSize: 13, color: Colors.grey)),
                                 const SizedBox(height: 4),
                                 TextField(
                                   decoration: InputDecoration(
-                                    hintText: AppLocalizations.of(context)?.translationAppearHere ?? 'Traducción aparecerá aquí...',
+                                    hintText: AppLocalizations.of(context)?.enterEnglish ?? 'Enter English...',
                                     filled: true,
                                     fillColor: isDarkMode ? const Color(0xFF232323) : Colors.grey[100],
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                       borderSide: BorderSide(color: Colors.grey[400]!),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: const Color(0xFF82B366), width: 2),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                                   ),
