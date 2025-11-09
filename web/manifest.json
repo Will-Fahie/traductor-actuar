@@ -1,11 +1,11 @@
 {
-    "name": "Achuar-Ingis",
-    "short_name": "Achuar-Ingis",
+    "name": "Achuar-Inkis",
+    "short_name": "Achuar-Inkis",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#hexcode",
     "theme_color": "#hexcode",
-    "description": "Achuar-Ingis Translator",
+    "description": "Achuar-Inkis Translator",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
