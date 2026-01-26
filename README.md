@@ -1,16 +1,32 @@
-# myapp
+# Traductor Achuar
 
-A new Flutter project.
+## Setup
 
-## Getting Started
+1. Install Flutter dependencies:
+   ```bash
+   flutter pub get
+   ```
 
-This project is a starting point for a Flutter application.
+2. Add your Firebase config files:
+   - `android/app/google-services.json`
+   - `ios/Runner/GoogleService-Info.plist`
 
-A few resources to get you started if this is your first Flutter project:
+3. Add `env.json` with your API keys:
+   ```json
+   {
+     "GOOGLE_TTS_API_KEY": "your-key-here"
+   }
+   ```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+4. Run the app:
+   ```bash
+   flutter run
+   ```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Features
+
+- Dictionary lookup
+- Text translation
+- Custom lessons
+- Teaching resources
+- Offline translation support
