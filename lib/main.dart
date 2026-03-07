@@ -15,6 +15,7 @@ import 'package:achuar_ingis/firebase_options.dart';
 import 'package:achuar_ingis/screens/custom_lessons_screen.dart';
 import 'package:achuar_ingis/screens/create_custom_lesson_screen.dart';
 import 'package:achuar_ingis/screens/coming_soon_screen.dart';
+import 'package:achuar_ingis/screens/guide_categories_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:achuar_ingis/services/language_service.dart';
 import 'package:achuar_ingis/l10n/app_localizations.dart';
@@ -133,20 +134,7 @@ class MyApp extends StatelessWidget {
                 page = const TeachingResourcesScreen();
                 break;
               case '/guide_resources':
-                // Temporarily showing coming soon screen - guide pages still exist
-                page = AnimatedBuilder(
-                  animation: LanguageService(),
-                  builder: (context, child) {
-                    final l10n = AppLocalizations.of(context);
-                    return ComingSoonScreen(
-                      title: l10n?.guideResourcesTitle ?? 'Recursos de Guía',
-                      subtitle: l10n?.comingSoon ?? 'Próximamente',
-                      description: l10n?.guideResourcesComingSoon ?? 'Estamos trabajando en recursos educativos de guía incluyendo información sobre la flora, fauna y cultura de la región Achuar. Esta sección estará disponible próximamente con categorías detalladas de aves, mamíferos y otros recursos naturales.',
-                      icon: Icons.explore_rounded,
-                      color: const Color(0xFFF38630),
-                    );
-                  },
-                );
+                page = const GuideCategoriesScreen();
                 break;
               case '/ecolodge_resources':
                 page = const NotImplementedScreen(featureName: 'Recursos de Ecolodge');
